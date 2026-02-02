@@ -1,0 +1,155 @@
+import React, { useState } from 'react';
+import { useData } from '../contexts/DataContext';
+import { Search, FileText, ChevronDown, ChevronUp, CheckCircle, Clock } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+export default function OrderHistory() {
+    const { orders, retailers, vendors, distributors } = useData();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
+
+    const filteredOrders = orders.filter(order => {
+        const retailer = retailers.find(r => r.id === order.retailerId);
+        const vendor = vendors.find(v => v.id === order.vendorId);
+        const searchString = `${order.id} ${retailer?.name} ${vendor?.name}`.toLowerCase();
+        return searchString.includes(searchTerm.toLowerCase());
+    });
+
+    const toggleExpand = (id) => {
+        setExpandedOrderId(expandedOrderId === id ? null : id);
+    };
+
+    return (
+        <div className="space-y-6">
+            <header>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Order History</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">Track and manage submitted Purchase Orders.</p>
+            </header>
+
+            {/* Search */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+                <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search PO #, Retailer, or Vendor..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            {/* Orders List */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm transition-colors">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4">PO Number</th>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Retailer</th>
+                                <th className="px-6 py-4">Vendor</th>
+                                <th className="px-6 py-4">Distributor</th>
+                                <th className="px-6 py-4 text-right">Total</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {filteredOrders.length > 0 ? (
+                                filteredOrders.map((order) => {
+                                    const retailer = retailers.find(r => r.id === order.retailerId);
+                                    const vendor = vendors.find(v => v.id === order.vendorId);
+                                    const distributor = distributors.find(d => d.id === order.distributorId) || { name: 'Manual' };
+                                    const isExpanded = expandedOrderId === order.id;
+
+                                    return (
+                                        <React.Fragment key={order.id}>
+                                            <tr
+                                                className={cn("hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors", isExpanded && "bg-gray-50 dark:bg-gray-700/50")}
+                                                onClick={() => toggleExpand(order.id)}
+                                            >
+                                                <td className="px-6 py-4 font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                                    {order.id}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {new Date(order.date).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                                    {retailer?.name || 'Unknown Retailer'}
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                                    {vendor?.name || 'Unknown Vendor'}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {distributor.name}
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
+                                                    ${order.total.toFixed(2)}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-transparent dark:border-green-800">
+                                                        <CheckCircle size={12} /> {order.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-gray-400">
+                                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
+                                                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+                                                    <td colSpan="8" className="px-6 py-4">
+                                                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-colors">
+                                                            <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                                                <FileText size={16} /> Order Details
+                                                            </h4>
+                                                            <table className="w-full text-sm">
+                                                                <thead className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 text-left">
+                                                                    <tr>
+                                                                        <th className="py-2">SKU</th>
+                                                                        <th className="py-2">Description</th>
+                                                                        <th className="py-2 text-center">Qty</th>
+                                                                        <th className="py-2 text-right">Cost</th>
+                                                                        <th className="py-2 text-right">Subtotal</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                                                                    {order.items.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className="py-2 font-mono text-xs text-gray-900 dark:text-gray-300">{item.sku}</td>
+                                                                            <td className="py-2 text-gray-600 dark:text-gray-400">{item.description}</td>
+                                                                            <td className="py-2 text-center text-gray-900 dark:text-gray-300">{item.qty}</td>
+                                                                            <td className="py-2 text-right text-gray-500 dark:text-gray-400">${item.cost.toFixed(2)}</td>
+                                                                            <td className="py-2 text-right font-medium text-gray-900 dark:text-white">${(item.cost * item.qty).toFixed(2)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                            {order.notes && (
+                                                                <div className="mt-4 text-sm bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-100 dark:border-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                                                                    <strong>Notes:</strong> {order.notes}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan="8" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 flex flex-col items-center justify-center gap-2">
+                                        <Clock size={32} className="text-gray-300 dark:text-gray-600" />
+                                        <p>No orders found.</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}
