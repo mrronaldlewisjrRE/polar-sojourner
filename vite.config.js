@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
+console.log("------------------- VITE CONFIG LOADED -------------------");
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -13,9 +15,9 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
+        entryFileNames: `assets/v2-[name]-[hash].js`,
+        chunkFileNames: `assets/v2-[name]-[hash].js`,
+        assetFileNames: `assets/v2-[name]-[hash].[ext]`
       }
     }
   }
