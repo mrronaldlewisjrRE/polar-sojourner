@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, Image as ImageIcon, Maximize2, Calendar, SortDesc } from 'lucide-react';
+import { Filter, Image as ImageIcon, Maximize2, Calendar, SortDesc, Trash2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { cn } from '../lib/utils';
 
@@ -14,7 +14,7 @@ const MOCK_PHOTOS = [
 ];
 
 export default function PhotoGallery() {
-    const { events } = useData();
+    const { events, updateEvent } = useData();
     const [filter, setFilter] = useState('All');
     const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Title'
     const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -23,6 +23,7 @@ export default function PhotoGallery() {
     const eventPhotos = events ? events.flatMap(event =>
         (event.images || []).map(img => ({
             id: img.id,
+            eventId: event.id, // Keep track of event ID for deletion
             title: event.title,
             category: event.type, // Map 'Schedule'/'Show' to category
             url: img.url,
@@ -49,6 +50,17 @@ export default function PhotoGallery() {
         }
         return a.title.localeCompare(b.title);
     });
+
+    const handleDeletePhoto = (e, photo) => {
+        e.stopPropagation();
+        if (!photo.isEventPhoto || !window.confirm('Delete this photo?')) return;
+
+        const event = events.find(ev => ev.id === photo.eventId);
+        if (event) {
+            const updatedImages = (event.images || []).filter(img => img.id !== photo.id);
+            updateEvent(photo.eventId, { images: updatedImages });
+        }
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -130,9 +142,21 @@ export default function PhotoGallery() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Actions */}
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1.5 rounded-full text-white">
                                 <Maximize2 size={14} />
                             </div>
+
+                            {photo.isEventPhoto && (
+                                <button
+                                    onClick={(e) => handleDeletePhoto(e, photo)}
+                                    className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full"
+                                    title="Delete Photo"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>

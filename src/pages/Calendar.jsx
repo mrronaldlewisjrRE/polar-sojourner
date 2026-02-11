@@ -305,9 +305,10 @@ export default function Calendar() {
                                                             />
                                                             <button
                                                                 onClick={() => removeImageFromEvent(event.id, img.id)}
-                                                                className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                className="absolute top-0.5 right-0.5 bg-red-600/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                                title="Delete Photo"
                                                             >
-                                                                <X size={10} />
+                                                                <Trash2 size={10} />
                                                             </button>
                                                         </div>
                                                     ))}
@@ -385,9 +386,10 @@ export default function Calendar() {
                                                 <button
                                                     type="button"
                                                     onClick={() => removeNewEventImage(img.id)}
-                                                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                    title="Remove Photo"
                                                 >
-                                                    <X size={12} />
+                                                    <Trash2 size={12} />
                                                 </button>
                                             </div>
                                         ))}
