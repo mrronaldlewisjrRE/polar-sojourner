@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { cn } from '../lib/utils';
-import { Filter, Search, Plus, MoreHorizontal, X } from 'lucide-react';
+import { Filter, Search, Plus, MoreHorizontal, X, LayoutList, Image as ImageIcon } from 'lucide-react';
+import PhotoGallery from '../components/PhotoGallery';
+
+import { useSearchParams } from 'react-router-dom';
 
 export default function VendorManagement() {
     const { vendors: VENDORS, distributors: DISTRIBUTORS, addVendor, updateVendor } = useData();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [filterStatus, setFilterStatus] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [openMenuId, setOpenMenuId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingVendor, setEditingVendor] = useState(null);
+
+    // View state controlled by URL or local state fallback
+    const view = searchParams.get('view') || 'list';
+    const setView = (newView) => {
+        setSearchParams({ view: newView });
+    };
 
     const toggleMenu = (id) => {
         setOpenMenuId(openMenuId === id ? null : id);
@@ -33,97 +44,131 @@ export default function VendorManagement() {
 
     return (
         <div className="space-y-6">
-            <header className="flex items-center justify-between">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Vendor Management</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Manage vendor status and distributor authorizations.</p>
-                </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-cdh-red text-white px-4 py-2 rounded-md font-medium hover:bg-cdh-dark flex items-center gap-2 shadow-sm transition-colors"
-                >
-                    <Plus size={18} />
-                    Add New Vendor
-                </button>
-            </header>
-
-            {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 transition-colors">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search vendors..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Manage vendor status, distributor authorizations, and events.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Filter size={18} className="text-gray-400" />
-                    <select
-                        className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
+                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex items-center border border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={() => setView('list')}
+                            className={cn(
+                                "p-2 rounded-md transition-all flex items-center gap-2 text-sm font-medium",
+                                view === 'list'
+                                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                            )}
+                        >
+                            <LayoutList size={18} />
+                            List
+                        </button>
+                        <button
+                            onClick={() => setView('gallery')}
+                            className={cn(
+                                "p-2 rounded-md transition-all flex items-center gap-2 text-sm font-medium",
+                                view === 'gallery'
+                                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                            )}
+                        >
+                            <ImageIcon size={18} />
+                            Gallery
+                        </button>
+                    </div>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-cdh-red text-white px-4 py-2 rounded-md font-medium hover:bg-cdh-dark flex items-center gap-2 shadow-sm transition-colors ml-2"
                     >
-                        <option value="All">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Paused">Paused</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
+                        <Plus size={18} />
+                        Add Vendor
+                    </button>
                 </div>
-            </div>
+            </header>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm transition-colors">
-                <table className="w-full text-left">
-                    <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">
-                        <tr>
-                            <th className="px-6 py-4">Vendor Name</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Order Email</th>
-                            <th className="px-6 py-4">Contact</th>
-                            <th className="px-6 py-4 text-center">Distributors</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {filteredVendors.map((vendor) => (
-                            <tr key={vendor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{vendor.name}</td>
-                                <td className="px-6 py-4">
-                                    <StatusToggle status={vendor.status} />
-                                </td>
-                                <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{vendor.email}</td>
-                                <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{vendor.contact}</td>
-                                <td className="px-6 py-4 text-center">
-                                    <div className="flex justify-center -space-x-2">
-                                        {vendor.authorizedDistributors.map((distId, i) => {
-                                            const dist = DISTRIBUTORS.find(d => d.id === distId);
-                                            return (
-                                                <div key={i} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300" title={dist?.name}>
-                                                    {dist?.name.substring(0, 2).toUpperCase()}
-                                                </div>
-                                            );
-                                        })}
-                                        {vendor.authorizedDistributors.length === 0 && (
-                                            <span className="text-xs text-gray-400 italic">None</span>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <VendorActions
-                                        isOpen={openMenuId === vendor.id}
-                                        onToggle={() => toggleMenu(vendor.id)}
-                                        onClose={() => setOpenMenuId(null)}
-                                        onEdit={() => handleEdit(vendor)}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            {view === 'gallery' ? (
+                <PhotoGallery />
+            ) : (
+                <>
+                    {/* Filters */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 transition-colors">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search vendors..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Filter size={18} className="text-gray-400" />
+                            <select
+                                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                            >
+                                <option value="All">All Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Paused">Paused</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm transition-colors">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th className="px-6 py-4">Vendor Name</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Order Email</th>
+                                    <th className="px-6 py-4">Contact</th>
+                                    <th className="px-6 py-4 text-center">Distributors</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {filteredVendors.map((vendor) => (
+                                    <tr key={vendor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{vendor.name}</td>
+                                        <td className="px-6 py-4">
+                                            <StatusToggle status={vendor.status} />
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{vendor.email}</td>
+                                        <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{vendor.contact}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex justify-center -space-x-2">
+                                                {vendor.authorizedDistributors.map((distId, i) => {
+                                                    const dist = DISTRIBUTORS.find(d => d.id === distId);
+                                                    return (
+                                                        <div key={i} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300" title={dist?.name}>
+                                                            {dist?.name.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {vendor.authorizedDistributors.length === 0 && (
+                                                    <span className="text-xs text-gray-400 italic">None</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <VendorActions
+                                                isOpen={openMenuId === vendor.id}
+                                                onToggle={() => toggleMenu(vendor.id)}
+                                                onClose={() => setOpenMenuId(null)}
+                                                onEdit={() => handleEdit(vendor)}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
 
             {isModalOpen && (
                 <VendorModal

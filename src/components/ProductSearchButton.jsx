@@ -46,15 +46,16 @@ export default function ProductSearchButton({ sku, description, vendorName }) {
     return (
         <div className="relative inline-block" ref={menuRef}>
             <button
+                data-testid="product-search"
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-1.5 text-gray-400 hover:text-cdh-red dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors flex items-center gap-1"
-                title="Product Intelligence Search"
+                className="text-gray-400 hover:text-cdh-red dark:hover:text-red-400 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Product Intelligence"
             >
                 <Search size={16} />
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                <div data-testid="product-search-menu" className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                     <div className="bg-gray-50 dark:bg-gray-900 px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             External Search

@@ -1,13 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Users, BarChart3, Menu, ShoppingBag, Box, ClipboardCheck, Sun, Moon, ArrowUp, ArrowDown } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { LayoutDashboard, PlusCircle, Users, BarChart3, Menu, ShoppingBag, Box, ClipboardCheck, Sun, Moon, ArrowUp, ArrowDown, Activity, CalendarDays, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useNavigate, Link, NavLink, Outlet } from 'react-router-dom';
 
 export default function Layout() {
+    const { signOut, user } = useAuth();
+    const navigate = useNavigate();
     const [darkMode, setDarkMode] = useState(() => {
         return localStorage.getItem('theme') === 'dark';
     });
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const mainRef = useRef(null);
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout failed', error);
+        }
+    };
 
     // Apply Dark Mode
     useEffect(() => {
@@ -20,6 +33,8 @@ export default function Layout() {
         }
     }, [darkMode]);
 
+    // Close mobile menu when route changes: Handled by onClick in NavContent
+
     // Scroll Handlers
     const scrollToTop = () => {
         mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -31,7 +46,7 @@ export default function Layout() {
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-            {/* Sidebar */}
+            {/* Sidebar (Desktop) */}
             <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col transition-colors duration-200">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <Link to="/" className="block">
@@ -43,23 +58,29 @@ export default function Layout() {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
-                    <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-                    <NavItem to="/new-order" icon={<PlusCircle size={20} />} label="New Order" />
-                    <NavItem to="/orders" icon={<ClipboardCheck size={20} />} label="Order History" />
-                    <div className="pt-4 pb-1">
-                        <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Management</p>
-                    </div>
-                    <NavItem to="/vendors" icon={<Users size={20} />} label="Vendors" />
-                    <NavItem to="/retailers" icon={<ShoppingBag size={20} />} label="Retailers" />
-                    <NavItem to="/products" icon={<Box size={20} />} label="Products" />
-                    <div className="pt-4 pb-1">
-                        <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">System</p>
-                    </div>
-                    <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" />
+                    <NavContent />
                 </nav>
 
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                    <div className="flex items-center gap-3 px-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                            {user?.email?.[0].toUpperCase() || 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user?.email}</p>
+                            <p className="text-xs text-gray-500 truncate">Authenticated</p>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                        <LogOut size={18} />
+                        <span>Sign Out</span>
+                    </button>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Theme</span>
                         <button
                             onClick={() => setDarkMode(!darkMode)}
@@ -71,6 +92,24 @@ export default function Layout() {
                     </div>
                 </div>
             </aside>
+
+            {/* Mobile Sidebar (Overlay) */}
+            {isMobileMenuOpen && (
+                <div className="fixed inset-0 z-50 md:hidden flex">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}></div>
+                    <div className="relative bg-white dark:bg-gray-800 w-64 h-full shadow-xl flex flex-col animate-in slide-in-from-left duration-200">
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                            <h1 className="text-xl font-bold text-cdh-red dark:text-red-400">Menu</h1>
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+                                <Menu size={20} />
+                            </button>
+                        </div>
+                        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                            <NavContent onClick={() => setIsMobileMenuOpen(false)} />
+                        </nav>
+                    </div>
+                </div>
+            )}
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -84,7 +123,10 @@ export default function Layout() {
                         >
                             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
-                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300">
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
+                        >
                             <Menu size={20} />
                         </button>
                     </div>
@@ -95,38 +137,69 @@ export default function Layout() {
                     <Outlet />
 
                     {/* Scroll Controls (Floating) */}
-                    <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
+                    <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
                         <button
                             onClick={scrollToTop}
-                            className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full shadow-md text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-cdh-red dark:hover:text-red-400 transition-all opacity-50 hover:opacity-100"
-                            title="Scroll to Top"
+                            className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-cdh-red dark:hover:text-red-400 transition-colors"
                         >
                             <ArrowUp size={20} />
                         </button>
                         <button
                             onClick={scrollToBottom}
-                            className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full shadow-md text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-cdh-red dark:hover:text-red-400 transition-all opacity-50 hover:opacity-100"
-                            title="Scroll to Bottom"
+                            className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-md border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-cdh-red dark:hover:text-red-400 transition-colors"
                         >
                             <ArrowDown size={20} />
                         </button>
                     </div>
+
+                    <footer className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 pb-2 text-center">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">
+                            CDH Platform — Internal Use Only
+                        </p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-600 font-mono">
+                            v5A.1 UX Patch | Build: {new Date().toLocaleDateString()}
+                        </p>
+                    </footer>
                 </main>
             </div>
         </div>
     );
 }
 
-function NavItem({ to, icon, label }) {
+function NavContent({ onClick }) {
+    return (
+        <>
+            <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={onClick} />
+            <NavItem to="/new-order" icon={<PlusCircle size={20} />} label="New Order" onClick={onClick} />
+            <NavItem to="/orders" icon={<ClipboardCheck size={20} />} label="Order History" onClick={onClick} />
+            <div className="pt-4 pb-1">
+                <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Management</p>
+            </div>
+            <NavItem to="/vendors" icon={<Users size={20} />} label="Vendors" onClick={onClick} />
+            <NavItem to="/retailers" icon={<ShoppingBag size={20} />} label="Retailers" onClick={onClick} />
+            <NavItem to="/calendar" icon={<CalendarDays size={20} />} label="Calendar" onClick={onClick} />
+            <NavItem to="/products" icon={<Box size={20} />} label="Products" onClick={onClick} />
+            <NavItem to="/sku-tracker" icon={<Activity size={20} />} label="Live SKU Tracker" onClick={onClick} />
+            <div className="pt-4 pb-1">
+                <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">System</p>
+            </div>
+            <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" onClick={onClick} />
+        </>
+    );
+}
+
+function NavItem({ to, icon, label, onClick }) {
     return (
         <NavLink
             to={to}
+            onClick={onClick}
             className={({ isActive }) => cn(
                 "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors duration-200",
                 isActive
                     ? "bg-cdh-red text-white shadow-sm dark:bg-red-900/50 dark:text-red-100"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
             )}
+            data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
         >
             {icon}
             <span>{label}</span>

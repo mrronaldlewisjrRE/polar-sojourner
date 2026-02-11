@@ -2060,7 +2060,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "488767",
+        "id": "488767_DUP",
         "name": "Jerry's Hardware",
         "location": "Tazwell, TN",
         "address": "1506 Midtown Shopping Ctr.",
@@ -2362,7 +2362,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "559294",
+        "id": "559294_DUP",
         "name": "Leeper Hardware Co",
         "location": "Jefferson City, TN",
         "address": "108 E. Broadway",
@@ -3184,7 +3184,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "723981",
+        "id": "723981_DUP",
         "name": "Parkview Home Center/Ind Builder Supply",
         "location": "Smithfield, NC",
         "address": "1801 Wal Pat Road",
@@ -3578,7 +3578,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "762971",
+        "id": "762971_DUP",
         "name": "RB Multiservice - Belize",
         "location": "Orange Walk Town, Belize C.A.",
         "address": "Guadalupe St.",
@@ -3936,7 +3936,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "852681",
+        "id": "852681_DUP",
         "name": "Sloan's of Madisonville",
         "location": "Madisonville, TN",
         "address": "4500 Hwy 41",
@@ -4452,7 +4452,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "923136",
+        "id": "923136_DUP",
         "name": "True's Electric",
         "location": "Liberty, KY",
         "address": "224 Wallace Wilkinson Blvd,",
@@ -4790,7 +4790,7 @@ export const RETAILERS = [
         }
     },
     {
-        "id": "488528",
+        "id": "488528_DUP",
         "name": "Xtreme(JEM Accessories)",
         "location": "Edison, NJ",
         "address": "32 Brunswick Ave",

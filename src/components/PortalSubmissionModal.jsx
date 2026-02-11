@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { ExternalLink, CheckCircle, Upload, FileText, AlertTriangle, X, CheckSquare, Square } from 'lucide-react';
 import { generateConfirmationPdf } from '../lib/pdfGenerator';
 
@@ -81,7 +81,7 @@ export default function PortalSubmissionModal({ isOpen, onClose, retailer, vendo
     const allChecked = checklist.loggedIn && checklist.itemsEntered && checklist.confirmationReached;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div data-testid="portal-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
@@ -131,6 +131,7 @@ export default function PortalSubmissionModal({ isOpen, onClose, retailer, vendo
                             )}
 
                             <button
+                                data-testid="launch-portal-btn"
                                 onClick={handleLaunch}
                                 className="w-full py-4 bg-cdh-red text-white rounded-lg font-bold text-lg hover:bg-cdh-dark shadow-lg flex items-center justify-center gap-2"
                             >
@@ -239,8 +240,8 @@ function CheckItem({ label, checked, onToggle }) {
         <div
             onClick={onToggle}
             className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${checked
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-gray-300'
                 }`}
         >
             {checked ? (

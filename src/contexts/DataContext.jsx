@@ -1,69 +1,143 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { VENDORS as INITIAL_VENDORS, DISTRIBUTORS as INITIAL_DISTRIBUTORS, PRODUCTS as INITIAL_PRODUCTS } from '../lib/mockData';
 import { RETAILERS as INITIAL_RETAILERS } from '../data/retailers';
 
 const DataContext = createContext();
 
-export function useData() {
-    return useContext(DataContext);
-}
+// eslint-disable-next-line react-refresh/only-export-components
+export const useData = () => useContext(DataContext);
 
-export function DataProvider({ children }) {
-    // Initialize state from mockData or empty defaults
+import { supabase } from '../lib/supabase';
+
+export const DataProvider = ({ children }) => {
+    const [products, setProducts] = useState({});
+    const [vendors, setVendors] = useState([]);
     const [retailers, setRetailers] = useState(INITIAL_RETAILERS);
-    const [vendors, setVendors] = useState(INITIAL_VENDORS);
     const [distributors, setDistributors] = useState(INITIAL_DISTRIBUTORS);
-    // Products is strictly an object { vendorId: [products] } in mockData, keeping it consistent or flattening?
-    // Let's keep it consistent for now but provide helper methods
-    const [products, setProducts] = useState(INITIAL_PRODUCTS);
+    const [orders, setOrders] = useState([]);
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Load orders from LocalStorage
-    const [orders, setOrders] = useState(() => {
-        try {
-            const saved = localStorage.getItem('cdh_orders');
-            return saved ? JSON.parse(saved) : [];
-        } catch (e) {
-            console.error("Failed to load orders", e);
-            return [];
-        }
-    });
+    // Initial Data Fetch
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [vData, rData, pData, oData, eData] = await Promise.all([
+                    supabase.from('vendors').select('*'),
+                    supabase.from('retailers').select('*'),
+                    supabase.from('products').select('*'),
+                    supabase.from('orders').select('*'),
+                    supabase.from('events').select('*')
+                ]);
 
-    // Save orders to LocalStorage
-    React.useEffect(() => {
-        localStorage.setItem('cdh_orders', JSON.stringify(orders));
-    }, [orders]);
+                if (vData.data) setVendors(vData.data);
+                if (rData.data) setRetailers(rData.data);
+                if (oData.data) setOrders(oData.data);
+                if (eData.data) setEvents(eData.data);
+
+                // Transform Products: Flat DB list -> { vendorId: [products] }
+                if (pData.data) {
+                    const productMap = {};
+                    pData.data.forEach(p => {
+                        if (!productMap[p.vendor_id]) productMap[p.vendor_id] = [];
+                        productMap[p.vendor_id].push(p);
+                    });
+                    setProducts(productMap);
+                }
+
+            } catch (error) {
+                console.error('Data load failed:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+
+        // Realtime Subscription
+        const tables = ['vendors', 'retailers', 'products', 'orders', 'events'];
+        const channels = tables.map(table => {
+            return supabase
+                .channel(`public:${table}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table }, payload => {
+                    if (table === 'vendors') handleRealtimeUpdate(setVendors, payload);
+                    if (table === 'retailers') handleRealtimeUpdate(setRetailers, payload);
+                    if (table === 'orders') handleRealtimeUpdate(setOrders, payload);
+                    if (table === 'events') handleRealtimeUpdate(setEvents, payload);
+                    // Products skipped for realtime complexity
+                })
+                .subscribe();
+        });
+
+        return () => channels.forEach(c => supabase.removeChannel(c));
+    }, []);
+
+    // Helper for Realtime Arrays
+    const handleRealtimeUpdate = (setter, payload) => {
+        if (payload.eventType === 'INSERT') setter(prev => [payload.new, ...prev]);
+        if (payload.eventType === 'UPDATE') setter(prev => prev.map(item => item.id === payload.new.id ? payload.new : item));
+        if (payload.eventType === 'DELETE') setter(prev => prev.filter(item => item.id !== payload.old.id));
+    };
 
     // --- Actions ---
 
-    // Retailers
-    const addRetailer = (retailer) => {
+    // Retailers (Supabase - Text ID)
+    const addRetailer = async (retailer) => {
         const newRetailer = { ...retailer, id: `r${Date.now()}` };
-        setRetailers([...retailers, newRetailer]);
+        const { error } = await supabase.from('retailers').insert([newRetailer]);
+        if (error) console.error("Error adding retailer:", error);
     };
 
-    const updateRetailer = (id, updates) => {
-        setRetailers(retailers.map(r => r.id === id ? { ...r, ...updates } : r));
+    const updateRetailer = async (id, updates) => {
+        const { error } = await supabase.from('retailers').update(updates).eq('id', id);
+        if (error) console.error("Error updating retailer:", error);
     };
 
-    const deleteRetailer = (id) => {
-        setRetailers(retailers.filter(r => r.id !== id));
+    const toggleRetailerFavorite = async (id) => {
+        const retailer = retailers.find(r => r.id === id);
+        if (retailer) {
+            const { error } = await supabase.from('retailers').update({ is_favorite: !retailer.is_favorite }).eq('id', id);
+            if (error) console.error("Error toggling favorite:", error);
+        }
     };
 
-    // Vendors
-    const addVendor = (vendor) => {
+    const deleteRetailer = async (id) => {
+        const { error } = await supabase.from('retailers').delete().eq('id', id);
+        if (error) console.error("Error deleting retailer:", error);
+    };
+
+    // Vendors (Supabase - Text ID)
+    const addVendor = async (vendor) => {
         const newVendor = { ...vendor, id: `v${Date.now()}` };
-        setVendors([...vendors, newVendor]);
+        const { error } = await supabase.from('vendors').insert([newVendor]);
+        if (error) console.error("Error adding vendor:", error);
     };
 
-    const updateVendor = (id, updates) => {
-        setVendors(vendors.map(v => v.id === id ? { ...v, ...updates } : v));
+    const updateVendor = async (id, updates) => {
+        const { error } = await supabase.from('vendors').update(updates).eq('id', id);
+        if (error) console.error("Error updating vendor:", error);
     };
 
-    const deleteVendor = (id) => {
-        setVendors(vendors.filter(v => v.id !== id));
+    const deleteVendor = async (id) => {
+        const { error } = await supabase.from('vendors').delete().eq('id', id);
+        if (error) console.error("Error deleting vendor:", error);
     };
 
-    // Distributors
+    // Events (Supabase - BigInt ID)
+    const addEvent = async (event) => {
+        // eslint-disable-next-line no-unused-vars
+        const { id, ...dbEvent } = event; // Strip ID, let DB generate
+        const { error } = await supabase.from('events').insert([dbEvent]);
+        if (error) console.error("Error adding event:", error);
+    };
+
+    const updateEvent = async (id, updates) => {
+        const { error } = await supabase.from('events').update(updates).eq('id', id);
+        if (error) console.error("Error updating event:", error);
+    };
+
+    // Distributors (Local only)
     const addDistributor = (distributor) => {
         const newDistributor = { ...distributor, id: `d${Date.now()}` };
         setDistributors([...distributors, newDistributor]);
@@ -77,46 +151,75 @@ export function DataProvider({ children }) {
         setDistributors(distributors.filter(d => d.id !== id));
     };
 
-    // Products
-    const addProduct = (vendorId, product) => {
-        const currentVendorProducts = products[vendorId] || [];
-        const newProduct = { ...product, sku: product.sku || `SKU-${Date.now()}` };
+    // Products (Supabase - BigInt ID)
+    const addProduct = async (vendorId, product) => {
+        // eslint-disable-next-line no-unused-vars
+        const { id, ...cleanProduct } = product;
+        const newProduct = {
+            ...cleanProduct,
+            vendor_id: vendorId,
+            sku: product.sku || `SKU-${Date.now()}`
+        };
+        const { error } = await supabase.from('products').insert([newProduct]);
+        if (error) console.error("Error adding product:", error);
 
+        // Manual local update (Optimistic)
+        const currentVendorProducts = products[vendorId] || [];
         setProducts({
             ...products,
             [vendorId]: [...currentVendorProducts, newProduct]
         });
     };
 
-    const deleteProduct = (vendorId, sku) => {
+    const updateProduct = async (vendorId, productId, updates) => {
+        const { error } = await supabase.from('products').update(updates).eq('id', productId);
+        if (error) console.error("Error updating product:", error);
+
+        // Manual local update
+        const currentVendorProducts = products[vendorId] || [];
         setProducts({
             ...products,
-            [vendorId]: products[vendorId].filter(p => p.sku !== sku)
+            [vendorId]: currentVendorProducts.map(p => p.id === productId ? { ...p, ...updates } : p)
         });
     };
 
-    // Orders (PO Tracking)
-    const addOrder = (order) => {
-        const newOrder = {
-            ...order,
-            id: `ORD-${Date.now()}`,
-            date: new Date().toISOString(),
-            status: order.submissionStatus || 'Submitted'
-        };
-        setOrders([newOrder, ...orders]);
-        return newOrder;
+    const deleteProduct = async (vendorId, productId) => {
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (error) console.error("Error deleting product:", error);
+
+        // Manual local update
+        const currentVendorProducts = products[vendorId] || [];
+        setProducts({
+            ...products,
+            [vendorId]: currentVendorProducts.filter(p => p.id !== productId)
+        });
     };
 
-    const updateOrder = (id, updates) => {
-        setOrders(orders.map(o => o.id === id ? { ...o, ...updates } : o));
+    // Orders (Supabase - BigInt ID)
+    const addOrder = async (order) => {
+        // eslint-disable-next-line no-unused-vars
+        const { id, ...cleanOrder } = order;
+        const newOrder = {
+            ...cleanOrder,
+            created_at: new Date().toISOString()
+        };
+        const { error } = await supabase.from('orders').insert([newOrder]);
+        if (error) console.error("Error adding order:", error);
+    };
+
+    const updateOrder = async (id, updates) => {
+        const { error } = await supabase.from('orders').update(updates).eq('id', id);
+        if (error) console.error("Error updating order:", error);
     };
 
     const value = {
-        retailers, addRetailer, updateRetailer, deleteRetailer,
+        retailers, addRetailer, updateRetailer, deleteRetailer, toggleRetailerFavorite,
         vendors, addVendor, updateVendor, deleteVendor,
         distributors, addDistributor, updateDistributor, deleteDistributor,
-        products, addProduct, deleteProduct,
-        orders, addOrder, updateOrder
+        products, addProduct, updateProduct, deleteProduct,
+        orders, addOrder, updateOrder,
+        events, addEvent, updateEvent,
+        loading
     };
 
     return (

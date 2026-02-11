@@ -96,12 +96,37 @@ export const RETAILERS = [
 
 export const PRODUCTS = {
     'v1': [
-        { sku: 'AC-100', description: 'Acme Hammer 16oz', packQty: 4, cost: 12.50 },
-        { sku: 'AC-101', description: 'Acme Screwdriver Set', packQty: 6, cost: 18.00 },
-        { sku: 'AC-200', description: 'Acme Power Drill', packQty: 2, cost: 45.00 },
+        { sku: 'AC-100', description: 'Acme Hammer 16oz', packQty: 4, cost: 12.50, distSkus: { orgill: '111-001', 'house-hasson': 'HH-100' } },
+        { sku: 'AC-101', description: 'Acme Screwdriver Set', packQty: 6, cost: 18.00, distSkus: { orgill: '111-002', 'house-hasson': 'HH-101' } },
+        { sku: 'AC-200', description: 'Acme Power Drill', packQty: 2, cost: 45.00, distSkus: { orgill: '111-003', 'house-hasson': 'HH-102' } },
     ],
     'v2': [
-        { sku: 'AP-55', description: 'Apex Wrench Set', packQty: 4, cost: 22.00 },
-        { sku: 'AP-56', description: 'Apex Pliers', packQty: 10, cost: 8.50 },
+        { sku: 'AP-55', description: 'Apex Wrench Set', packQty: 4, cost: 22.00, distSkus: { wallace: 'W-550' } },
+        { sku: 'AP-56', description: 'Apex Pliers', packQty: 10, cost: 8.50, distSkus: { wallace: 'W-560' } },
+    ],
+    'v3': [ // Dize
+        { sku: 'DZ-99', description: 'Dize Awning 12ft', packQty: 1, cost: 120.00, distSkus: { orgill: '999-DIZ' } },
+        { sku: 'DZ-100', description: 'Dize Canvas Repair Kit', packQty: 12, cost: 15.00, distSkus: { orgill: '998-DIZ' } },
+    ],
+    'v4': [ // Dundas Jafine (Verified via Internet Search)
+        { sku: 'PCLT4WZW', description: 'ProClean Dryer Duct Lint Trap', packQty: 1, cost: 27.37, distSkus: { 'house-hasson': 'DJ-100', orgill: '998-NEW' } },
+        { sku: 'CHK100ZW6', description: 'White Heat Kit', packQty: 12, cost: 19.87, distSkus: { 'house-hasson': 'DJ-101', orgill: '999-NEW' } },
+    ],
+    'v5': [ // Ettore (Verified via Internet Search)
+        { sku: '11112', description: 'Original Window Squeegee 12in', packQty: 6, cost: 12.50, distSkus: { 'house-hasson': 'ET-112', orgill: '622-11112' } },
+        { sku: '1144', description: 'Brass Channel w/ Rubber 18in', packQty: 6, cost: 14.25, distSkus: { 'house-hasson': 'ET-118', orgill: '622-1144' } },
+    ],
+    'v10': [ // Midwest Can (Verified via Internet Search)
+        { sku: '1210', description: 'Gas Can 1 Gallon (Red)', packQty: 12, cost: 8.99, distSkus: { 'house-hasson': '7794332', orgill: 'MC-1210' } },
+        { sku: '3681491', description: 'Scepter Auto-Flow Gas Can', packQty: 4, cost: 16.50, distSkus: { orgill: '3681491' } },
+    ],
+    'v11': [ // Mr. Heater
+        { sku: 'MH-BUDDY', description: 'Mr. Heater Buddy Portable', packQty: 2, cost: 85.00, distSkus: { 'house-hasson': 'HTR-001' } },
+        { sku: 'MH-BIG', description: 'Mr. Heater Big Buddy', packQty: 1, cost: 140.00, distSkus: { 'house-hasson': 'HTR-002' } },
+        { sku: 'MH-HOSE', description: '12ft Propane Hose', packQty: 10, cost: 18.50, distSkus: { 'house-hasson': 'HTR-003' } },
+    ],
+    'v21': [ // United General
+        { sku: 'UG-GLOVES', description: 'Work Gloves (Leather) L', packQty: 24, cost: 4.50, distSkus: { orgill: 'GLV-555' } },
+        { sku: 'UG-ROPE', description: 'Nylon Rope 50ft', packQty: 12, cost: 6.75, distSkus: { orgill: 'RP-555' } },
     ]
 };

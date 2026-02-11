@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
+import RetailerSearchModal from '../components/RetailerSearchModal';
 
 export default function RetailerManagement() {
-    const { retailers, addRetailer, updateRetailer, deleteRetailer } = useData();
+    const { retailers, addRetailer, updateRetailer, deleteRetailer, toggleRetailerFavorite } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
     const [editingRetailer, setEditingRetailer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -12,6 +14,8 @@ export default function RetailerManagement() {
         r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.location.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const favorites = retailers.filter(r => r.isFavorite);
 
     const handleEdit = (retailer) => {
         setEditingRetailer(retailer);
@@ -36,13 +40,52 @@ export default function RetailerManagement() {
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Retailer Management</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Manage retailer profiles, addresses, and distributor accounts.</p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-cdh-red text-white px-4 py-2 rounded-md font-medium hover:bg-cdh-dark flex items-center gap-2 shadow-sm transition-colors"
-                >
-                    <Plus size={18} /> Add Retailer
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setIsSearchModalOpen(true)}
+                        className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 shadow-sm transition-colors"
+                    >
+                        <Globe size={18} /> Discover New
+                    </button>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-cdh-red text-white px-4 py-2 rounded-md font-medium hover:bg-cdh-dark flex items-center gap-2 shadow-sm transition-colors"
+                    >
+                        <Plus size={18} /> Add Retailer
+                    </button>
+                </div>
             </header>
+
+            {/* Favorites Section */}
+            {favorites.length > 0 && !searchTerm && (
+                <section className="mb-8">
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <Star size={18} className="fill-yellow-400 text-yellow-400" /> Favorites
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {favorites.slice(0, 6).map(retailer => (
+                            <div key={retailer.id} onClick={() => handleEdit(retailer)} className="cursor-pointer bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 p-4 rounded-xl border border-yellow-200 dark:border-yellow-900/30 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-yellow-100 dark:bg-yellow-900/20 p-2 rounded-full text-yellow-600 dark:text-yellow-400">
+                                        <Star size={16} className="fill-current" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 dark:text-white truncate max-w-[120px]">{retailer.name}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{retailer.location}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleRetailerFavorite(retailer.id); }}
+                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-yellow-500 transition-all"
+                                    title="Remove from existing Favorites"
+                                >
+                                    <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* Search */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
@@ -68,6 +111,15 @@ export default function RetailerManagement() {
 
                     return (
                         <div key={retailer.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition-all relative group">
+
+                            {/* Favorite Toggle (Top Right) */}
+                            <button
+                                onClick={() => toggleRetailerFavorite(retailer.id)}
+                                className={`absolute top-4 right-12 z-10 p-1.5 rounded-full transition-colors ${retailer.isFavorite ? 'text-yellow-400 hover:text-yellow-500' : 'text-gray-300 hover:text-yellow-400 dark:text-gray-600'}`}
+                                title={retailer.isFavorite ? "Remove favorite" : "Add to favorites"}
+                            >
+                                <Star size={18} className={retailer.isFavorite ? "fill-current" : ""} />
+                            </button>
 
                             {/* Missing Data Warning Badge */}
                             {isManualReview && (
@@ -143,6 +195,15 @@ export default function RetailerManagement() {
                     }}
                 />
             )}
+
+            <RetailerSearchModal
+                isOpen={isSearchModalOpen}
+                onClose={() => setIsSearchModalOpen(false)}
+                onImport={(data) => {
+                    addRetailer(data);
+                    setIsSearchModalOpen(false);
+                }}
+            />
         </div>
     );
 }

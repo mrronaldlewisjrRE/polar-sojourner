@@ -4,6 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AlertCircle, Clock, FileText, TrendingUp, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+import { Link } from 'react-router-dom';
+
 export default function Dashboard() {
     const { orders, distributors } = useData();
 
@@ -18,9 +20,12 @@ export default function Dashboard() {
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Overview of order flow and system health.</p>
                 </div>
-                <button className="bg-cdh-red text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-cdh-dark transition-colors shadow-sm">
+                <Link
+                    to="/new-order"
+                    className="bg-cdh-red text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-cdh-dark transition-colors shadow-sm inline-flex items-center"
+                >
                     + Quick New Order
-                </button>
+                </Link>
             </header>
 
             {/* Stats Grid */}

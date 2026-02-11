@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
+import LiveStatusIndicator from '../components/LiveStatusIndicator';
 import { Plus, Search, Edit2, Trash2, X, Tag, DollarSign, Package } from 'lucide-react';
 import ProductSearchButton from '../components/ProductSearchButton';
 
@@ -99,6 +100,7 @@ export default function ProductManagement() {
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <LiveStatusIndicator sku={product.sku} storeName={vendor?.name || 'Vendor Site'} />
                                                 <Tag size={14} className="text-gray-400" />
                                                 {product.sku}
                                             </span>

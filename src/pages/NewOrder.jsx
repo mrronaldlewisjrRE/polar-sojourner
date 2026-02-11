@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import LiveStatusIndicator from '../components/LiveStatusIndicator';
 import { Search, Trash2, Plus, ArrowRight, CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductSearchButton from '../components/ProductSearchButton';
@@ -188,18 +189,173 @@ export default function NewOrder() {
                 <p className="text-gray-500 dark:text-gray-400 mt-1">Select retailer, vendor, and distributor to begin.</p>
             </header>
 
+            {/* Global Search */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors mb-6">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Search size={16} /> Global Lookup
+                </h2>
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Search by SKU (Vendor/Distributor), Retailer Name, or Item Description..."
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        onChange={() => {
+                            // Logic moved to native onInput via datalist for simplicity
+                        }}
+                        list="global-omni-search"
+                        onInput={(e) => {
+                            const val = e.target.value;
+                            if (!val.includes(':')) return; // Simple guard to wait for selection
+
+                            // Parse selection type based on prefix
+                            const [type, ...rest] = val.split(':');
+                            const id = rest.join(':').trim(); // Handle potential multiple colons in desc? No, formatted values.
+
+                            // Clean value format: "Type: ID - Label"
+                            // Actually, simpler to find exact match in data
+
+                            // 1. Retailer Match
+                            const retMatch = RETAILERS.find(r => `Retailer: ${r.name}` === val);
+                            if (retMatch) {
+                                setRetailerId(retMatch.id);
+                                setVendorId(''); setItems([]); // Reset downstream
+                                e.target.value = '';
+                                return;
+                            }
+
+                            // 2. Distributor Match
+                            const distMatch = DISTRIBUTORS.find(d => `Distributor: ${d.name}` === val);
+                            if (distMatch) {
+                                if (!vendorId) {
+                                    alert('Please select a Vendor first before setting Distributor (or use Auto-Routing).');
+                                    e.target.value = '';
+                                    return;
+                                }
+                                setDistributorId(distMatch.id);
+                                e.target.value = '';
+                                return;
+                            }
+
+                            // 3. Product Match
+                            const allProducts = Object.entries(PRODUCTS).flatMap(([vid, prods]) =>
+                                prods.map(p => ({ ...p, vendorId: vid }))
+                            );
+                            // Match by reconstructing the label format used in datalist
+                            // Format: "Product: SKU - Desc (Vendor)"
+                            // We need to match precise values or use ID/SKU lookup from string
+                            // Let's use string includes for robustness if exact match fails
+
+                            // Find product where `Product: ${p.sku} ...` matches val
+                            // Or safer: store ID in a hidden way? No, datalist.
+                            // Let's iterate.
+                            const prodMatch = allProducts.find(p => {
+                                const vName = VENDORS.find(v => v.id === p.vendorId)?.name;
+                                const distSkuLabel = p.distSkus ? ` [${Object.values(p.distSkus).join(', ')}]` : '';
+                                const label = `Product: ${p.sku}${distSkuLabel} - ${p.description} (${vName})`;
+                                return label === val;
+                            });
+
+                            if (prodMatch) {
+                                const v = VENDORS.find(v => v.id === prodMatch.vendorId);
+                                if (window.confirm(`Select Vendor "${v?.name}" and add ${prodMatch.sku}?`)) {
+                                    setVendorId(prodMatch.vendorId);
+                                    setItems([{ ...prodMatch, qty: 1 }]);
+                                    e.target.value = '';
+                                }
+                            }
+                        }}
+                    />
+                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <datalist id="global-omni-search">
+                        {/* Retailers */}
+                        {RETAILERS.map(r => (
+                            <option key={`r-${r.id}`} value={`Retailer: ${r.name}`}>Location: {r.location}</option>
+                        ))}
+
+                        {/* Distributors */}
+                        {DISTRIBUTORS.map(d => (
+                            <option key={`d-${d.id}`} value={`Distributor: ${d.name}`}>Format: {d.format}</option>
+                        ))}
+
+                        {/* Products with Distributor SKUs */}
+                        {Object.entries(PRODUCTS).flatMap(([vid, prods]) =>
+                            prods.map(p => {
+                                const vName = VENDORS.find(v => v.id === vid)?.name || vid;
+                                const distSkuLabel = p.distSkus ? ` [${Object.values(p.distSkus).join(', ')}]` : '';
+                                return <option key={`${vid}-${p.sku}`} value={`Product: ${p.sku}${distSkuLabel} - ${p.description} (${vName})`} />;
+                            })
+                        )}
+                    </datalist>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                    Search for <strong>Retailers</strong>, <strong>Distributors</strong>, or <strong>Products</strong> (by Vendor or Distributor SKU).
+                </p>
+            </div>
+
             {/* Selection Grid */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 transition-colors">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Retailer</label>
-                    <select
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
-                        value={retailerId}
-                        onChange={(e) => { setRetailerId(e.target.value); if (!e.target.value) setVendorId(''); setItems([]); }}
-                    >
-                        <option value="">-- Choose Retailer --</option>
-                        {RETAILERS.map(r => <option key={r.id} value={r.id}>{r.name} ({r.location})</option>)}
-                    </select>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            list="retailer-list-search"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
+                            placeholder="Type to search retailer..."
+                            value={RETAILERS.find(r => r.id === retailerId)?.name || retailerId} // Show name if ID matched, else raw input
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                const match = RETAILERS.find(r => r.name === val);
+                                if (match) {
+                                    setRetailerId(match.id);
+                                    setVendorId('');
+                                    setItems([]);
+                                } else {
+                                    setRetailerId(val); // Temporary hold of text
+                                }
+                            }}
+                            onBlur={(e) => {
+                                // If no match found on blur, effectively acts as "Search"
+                                // We keep the text in state to allow "Add New"
+                            }}
+                        />
+                        <datalist id="retailer-list-search">
+                            {RETAILERS.map(r => (
+                                <option key={r.id} value={r.name}>{r.location}</option>
+                            ))}
+                        </datalist>
+
+                        {/* Add New Hook */}
+                        {retailerId && !RETAILERS.find(r => r.id === retailerId) && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border border-yellow-200 dark:border-yellow-700 z-10 shadow-lg">
+                                <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                                    Retailer "{retailerId}" not found.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        // Simple prompt for now, could be a modal
+                                        // Actually let's redirect to Retailer page or open a modal?
+                                        // For MVP: Inline prompt
+                                        const loc = prompt(`Enter Location (City, State) for ${retailerId}:`);
+                                        if (loc) {
+                                            // Mock adding - in real app would call addRetailer context
+                                            // But NewOrder doesn't expose addRetailer. We need it.
+                                            // Let's assume user must go to Retailer Mgmt for full add
+                                            // OR we just use a dummy ID for this session?
+                                            // Better: Link to Retailer Management
+                                            if (window.confirm("Quick Add is not fully enabled. Go to Retailer Management to add and return?")) {
+                                                // Link logic
+                                                window.location.href = '/retailers';
+                                            }
+                                        }
+                                    }}
+                                    className="text-sm font-bold text-cdh-red hover:underline"
+                                >
+                                    + Add New Retailer
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     {competitorTags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
                             {competitorTags.map((tag, idx) => (
@@ -213,6 +369,7 @@ export default function NewOrder() {
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Vendor</label>
                     <select
+                        data-testid="vendor-select"
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:text-gray-400 dark:disabled:text-gray-600"
                         value={vendorId}
                         disabled={!retailerId}
@@ -249,7 +406,7 @@ export default function NewOrder() {
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm min-h-[400px] transition-colors">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Order Items</h2>
-                        <button onClick={addItem} className="text-cdh-red hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1">
+                        <button data-testid="add-item" onClick={addItem} className="text-cdh-red hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1">
                             <Plus size={16} /> Add Item
                         </button>
                     </div>
@@ -261,31 +418,72 @@ export default function NewOrder() {
                             </div>
                         )}
                         {items.map((item, index) => (
-                            <div key={index} className="flex gap-4 items-start p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 group">
+                            <div key={index} data-testid="line-item-row" className="flex gap-4 items-start p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 group">
                                 <div className="flex-1">
                                     <div className="flex justify-between items-center mb-1">
-                                        <label className="text-xs text-gray-500 dark:text-gray-400 block">SKU</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                            SKU
+                                            {item.sku && <LiveStatusIndicator sku={item.sku} storeName={selectedVendor?.name} />}
+                                        </label>
                                         <ProductSearchButton
                                             sku={item.sku}
                                             description={item.description}
                                             vendorName={selectedVendor?.name}
                                         />
                                     </div>
-                                    <select
-                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
+                                    <input
+                                        type="text"
+                                        list={`sku-list-${index}`}
+                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
+                                        placeholder="Type or select SKU..."
                                         value={item.sku}
                                         onChange={(e) => updateItem(index, 'sku', e.target.value)}
-                                    >
-                                        <option value="">Select SKU</option>
+                                    />
+                                    <datalist id={`sku-list-${index}`}>
                                         {vendorProducts.map(p => (
-                                            <option key={p.sku} value={p.sku}>{p.sku} - {p.description}</option>
+                                            <option key={p.sku} value={p.sku}>{p.description}</option>
                                         ))}
-                                    </select>
+                                    </datalist>
                                 </div>
                                 <div className="flex-[2] pt-6">
                                     <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{item.description || '—'}</p>
                                 </div>
                                 <div className="w-24">
+                                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Unit Cost</label>
+                                    <div className="relative">
+                                        <span className="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className={`w-full border rounded px-2 pl-5 py-1.5 text-sm outline-none ${vendorProducts.find(p => p.sku === item.sku)?.cost !== parseFloat(item.cost)
+                                                ? 'border-red-300 bg-red-50 text-red-900 focus:ring-2 focus:ring-red-200'
+                                                : 'border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-600 dark:text-white'
+                                                }`}
+                                            value={item.cost}
+                                            onChange={(e) => updateItem(index, 'cost', parseFloat(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                    {item.sku && (
+                                        <div className="mt-1 text-[10px]">
+                                            {(() => {
+                                                const catalog = vendorProducts.find(p => p.sku === item.sku);
+                                                if (!catalog) return null;
+                                                const diff = Math.abs(item.cost - catalog.cost) > 0.001;
+                                                return diff ? (
+                                                    <span className="text-cdh-red flex items-center gap-0.5" title={`Catalog Price: $${catalog.cost.toFixed(2)}`}>
+                                                        <AlertTriangle size={10} /> List: ${catalog.cost.toFixed(2)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-green-600 flex items-center gap-0.5">
+                                                        <CheckCircle size={10} /> Verified
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="w-20">
                                     <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Qty</label>
                                     <input
                                         type="number"
@@ -296,7 +494,7 @@ export default function NewOrder() {
                                     />
                                 </div>
                                 <div className="pt-6">
-                                    <button onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
+                                    <button data-testid="remove-item" onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -332,6 +530,7 @@ export default function NewOrder() {
                     )}
                 </div>
                 <button
+                    data-testid="submit-order"
                     className="bg-cdh-red text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-cdh-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
                     disabled={!retailerId || !vendorId || !distributorId || items.length === 0}
                     onClick={() => setStep('review')}
@@ -364,8 +563,8 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
                         <AlertTriangle className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" size={20} />
                         <div>
-                            <p className="font-medium text-blue-900 dark:text-blue-200">Routing Destination: {routing?.name}</p>
-                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">This order will be formatted as {routing?.format} and emailed to {retailer?.accounts[routing?.id] ? 'authorized account' : 'the distributor'}.</p>
+                            <p className="font-medium text-blue-900 dark:text-blue-200">Routing Destination: {distributor?.name}</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">This order will be formatted as {distributor?.format} and emailed to {retailer?.accounts[distributor?.id] ? 'authorized account' : 'the distributor'}.</p>
                         </div>
                     </div>
 
@@ -424,6 +623,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
 
                         {isPortalRequired ? (
                             <button
+                                data-testid="submit-via-portal"
                                 onClick={onOpenPortal}
                                 className="w-full bg-cdh-red text-white py-3 rounded-lg font-bold text-lg hover:bg-cdh-dark shadow-md transition-colors flex items-center justify-center gap-2"
                             >
@@ -432,6 +632,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                             </button>
                         ) : (
                             <button
+                                data-testid="submit-order"
                                 onClick={onSubmit}
                                 className="w-full bg-cdh-red text-white py-3 rounded-lg font-bold text-lg hover:bg-cdh-dark shadow-md transition-colors"
                             >
@@ -451,7 +652,7 @@ function SubmissionSuccess({ reset }) {
             <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 mb-6">
                 <CheckCircle size={40} />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Order Submitted!</h1>
+            <h1 data-testid="submission-success" className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Order Submitted!</h1>
             <p className="text-gray-500 dark:text-gray-400 max-w-md mb-8">
                 Your order has been recorded and processed.
             </p>

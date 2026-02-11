@@ -6,13 +6,21 @@ import { cn } from '../lib/utils';
 export default function OrderHistory() {
     const { orders, retailers, vendors, distributors } = useData();
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     const filteredOrders = orders.filter(order => {
         const retailer = retailers.find(r => r.id === order.retailerId);
         const vendor = vendors.find(v => v.id === order.vendorId);
+
+        // Search Filter
         const searchString = `${order.id} ${retailer?.name} ${vendor?.name}`.toLowerCase();
-        return searchString.includes(searchTerm.toLowerCase());
+        const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+
+        // Status Filter
+        const matchesStatus = statusFilter === 'All' || (order.status || 'Submitted') === statusFilter;
+
+        return matchesSearch && matchesStatus;
     });
 
     const toggleExpand = (id) => {
@@ -26,18 +34,52 @@ export default function OrderHistory() {
                 <p className="text-gray-500 dark:text-gray-400 mt-1">Track and manage submitted Purchase Orders.</p>
             </header>
 
-            {/* Search */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
-                <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search PO #, Retailer, or Vendor..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            {/* Search & Filter */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex gap-3 w-full max-w-lg">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search PO #, Retailer, or Vendor..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    {/* Status Filter */}
+                    <div className="relative w-40">
+                        <select
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-cdh-red outline-none cursor-pointer"
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            value={statusFilter}
+                        >
+                            <option value="All">All Status</option>
+                            <option value="Submitted">Submitted</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
                 </div>
+                <button
+                    onClick={() => {
+                        const headers = ["PO Number", "Date", "Retailer", "Vendor", "Total", "Status"];
+                        const rows = orders.map(o => {
+                            const r = retailers.find(x => x.id === o.retailerId)?.name || 'Unknown';
+                            const v = vendors.find(x => x.id === o.vendorId)?.name || 'Unknown';
+                            return [o.id, new Date(o.date).toLocaleDateString(), r, v, o.total.toFixed(2), o.status];
+                        });
+                        const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `CDH_Order_Log_${new Date().toISOString().split('T')[0]}.csv`;
+                        link.click();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
+                >
+                    <FileText size={16} /> Export CSV
+                </button>
             </div>
 
             {/* Orders List */}
@@ -89,8 +131,8 @@ export default function OrderHistory() {
                                                     ${order.total.toFixed(2)}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-transparent dark:border-green-800">
-                                                        <CheckCircle size={12} /> {order.status}
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-transparent dark:border-blue-800">
+                                                        <CheckCircle size={12} /> Submitted
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-gray-400">
