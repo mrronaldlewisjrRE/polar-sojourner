@@ -17,7 +17,7 @@ import {
     CalendarDays,
     LogOut,
     MessageCircle,
-    Database
+    Server
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate, Link, NavLink, Outlet } from 'react-router-dom';
@@ -223,7 +223,7 @@ export default function Layout() {
                             CDH Platform — Internal Use Only
                         </p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-600 font-mono">
-                            v5A.2 UX Patch | Build: {new Date().toLocaleDateString()}
+                            v5A.3 HOTFIX | Build: {new Date().toLocaleDateString()}
                         </p>
                     </footer>
                 </main>
@@ -264,7 +264,7 @@ function NavContent({ onClick, onChatClick }) {
             <div className="pt-4 pb-1">
                 <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">System</p>
             </div>
-            <NavItem to="/import-staging" icon={<Database size={20} />} label="Data Import" onClick={onClick} />
+            <NavItem to="/import-staging" icon={<Server size={20} />} label="Data Import" onClick={onClick} />
             <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" onClick={onClick} />
         </>
     );

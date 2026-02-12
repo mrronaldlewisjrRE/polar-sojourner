@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Upload, Check, AlertTriangle, X, Database, ArrowRight } from 'lucide-react';
+import { Upload, Check, AlertTriangle, X, Server, ArrowRight } from 'lucide-react';
 
 export default function DataImportStaging() {
     const { addRetailer } = useData();
@@ -86,7 +86,7 @@ export default function DataImportStaging() {
         <div className="space-y-6 max-w-6xl mx-auto">
             <header>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                    <Database className="text-cdh-red" />
+                    <Server className="text-cdh-red" />
                     Data Import Governance
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -163,7 +163,7 @@ export default function DataImportStaging() {
                     <div className="flex-1 overflow-y-auto min-h-[400px]">
                         {stagedData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                <Database size={48} className="mb-4 opacity-20" />
+                                <Server size={48} className="mb-4 opacity-20" />
                                 <p>No data staged. Paste JSON to begin.</p>
                             </div>
                         ) : (
