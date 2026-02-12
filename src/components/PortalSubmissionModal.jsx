@@ -38,6 +38,16 @@ export default function PortalSubmissionModal({ isOpen, onClose, retailer, vendo
     const handleFinalize = async () => {
         if (!poNumber || !evidenceFile) return;
 
+        // SOFT PROMPT: Missing Email
+        let orderEmail = retailer.email;
+        if (!orderEmail) {
+            const manualEmail = prompt(
+                `NOTICE: ${retailer.name} has no email on file.\n\nEnter an email for this order to receive the confirmation PDF (optional):`,
+                ""
+            );
+            if (manualEmail) orderEmail = manualEmail;
+        }
+
         setIsGenerating(true);
 
         try {
@@ -51,11 +61,6 @@ export default function PortalSubmissionModal({ isOpen, onClose, retailer, vendo
                 [{ name: evidenceFile.name, size: evidenceFile.size }]
             );
 
-            // 2. Prepare Evidence Object
-            // In a real app, we'd upload the file. Here we mock it or store small files as data URLs?
-            // User requested storing it. For MVP lets assume we store file metadata and maybe base64 if small.
-            // We'll just pass the file object and let the parent handle storage logic/limitations.
-
             const evidence = {
                 poNumber,
                 file: evidenceFile,
@@ -67,6 +72,7 @@ export default function PortalSubmissionModal({ isOpen, onClose, retailer, vendo
                 submissionStatus: 'SUBMITTED', // Enforce specific status
                 vendorPortalPoNumber: poNumber,
                 evidenceFiles: [evidence],
+                orderEmail, // Pass captured email
                 orderEmailPdf: { name: `Confirmation-${poNumber}.pdf`, dataUrl: pdfDataUrl }
             });
 

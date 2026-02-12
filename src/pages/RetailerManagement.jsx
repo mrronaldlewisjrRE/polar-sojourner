@@ -137,9 +137,16 @@ export default function RetailerManagement() {
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-900 dark:text-white">{retailer.name}</h3>
-                                        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                            <MapPin size={14} />
-                                            {retailer.location}
+                                        <div className="flex flex-col mt-1">
+                                            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                                                <MapPin size={14} />
+                                                {retailer.location}
+                                            </div>
+                                            {retailer.geocoded_at && (
+                                                <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                                    Updated: {new Date(retailer.geocoded_at).toLocaleDateString()}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

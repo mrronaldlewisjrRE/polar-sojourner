@@ -1,39 +1,40 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Deterministic status generator (Mock)
-// Returns 'active' or 'inactive' based on SKU hash to be consistent across reloads
-const getSimulatedStatus = (sku) => {
-    let hash = 0;
-    for (let i = 0; i < sku.length; i++) {
-        hash = ((hash << 5) - hash) + sku.charCodeAt(i);
-        hash |= 0; // Convert to 32bit integer
-    }
-    // 80% chance of being active
-    const randomish = Math.abs(hash) % 100;
-    return randomish < 80 ? 'active' : 'inactive';
-};
-
 export function useLiveVerification() {
     const [progress, setProgress] = useState({ total: 0, checked: 0, isComplete: false });
+    const [isScanning, setIsScanning] = useState(false);
+    const stopRequested = useRef(false);
     const processingRef = useRef(false);
 
-    // This function triggers the cascade verification
+    const stopVerification = useCallback(() => {
+        if (processingRef.current) {
+            stopRequested.current = true;
+        }
+    }, []);
+
     const startVerification = useCallback((items) => {
         if (processingRef.current || !items || items.length === 0) return;
 
         processingRef.current = true;
+        stopRequested.current = false;
+        setIsScanning(true);
         setProgress({ total: items.length, checked: 0, isComplete: false });
 
         let checkedCount = 0;
         const queue = [...items];
 
-        // We simulate a constrained concurrency (e.g., 3 checks at a time)
-        // wrapper to process one item
-        const processItem = () => {
+        const processItem = async () => {
+            // Check for stop signal
+            if (stopRequested.current) {
+                // If stopped, we just empty the queue and finish
+                queue.length = 0;
+            }
+
             if (queue.length === 0) {
-                if (checkedCount === items.length) {
+                if (checkedCount === items.length || stopRequested.current) {
                     processingRef.current = false;
+                    setIsScanning(false);
                     setProgress(p => ({ ...p, isComplete: true }));
                 }
                 return;
@@ -41,61 +42,87 @@ export function useLiveVerification() {
 
             const item = queue.shift();
 
-            // 1. Mark as "checking" (yellow pulse) via event/storage
-            // We'll interpret 'unknown' as pending if we are in verification mode, 
-            // but here we can dispatch a specific 'checking' event if we want distinct UI.
-            // For simplicity, we'll let the UI show "checking" if status is unknown and verification is active,
-            // or we can explicitly set a temp status.
-            // Let's explicitly set a "checking" status so the UI reacts immediately.
-
+            // 1. Mark as "checking"
             window.dispatchEvent(new CustomEvent('sku-status-update-internal', {
                 detail: { sku: item.sku, status: 'checking' }
             }));
 
-            // 2. Simulate network delay (random 500ms - 1500ms)
-            const delay = 500 + Math.random() * 1000;
+            try {
+                // 2. Call Real API
+                const params = new URLSearchParams({
+                    sku: item.sku,
+                    vendor: item.vendorId || item.vendorName?.toLowerCase().replace(/\s+/g, '')
+                });
 
-            setTimeout(() => {
-                // 3. Resolve status
-                const result = getSimulatedStatus(item.sku);
+                const response = await fetch(`/api/check-sku?${params.toString()}`);
+                const resultData = await response.json();
 
-                // 4. Update Persistence (Supabase)
+                // fallback if API fails or returns unknown
+                const status = resultData.status || 'unknown';
+
+                // 3. Update Persistence
                 const data = {
                     sku: item.sku,
-                    status: result,
-                    created_at: new Date().toISOString()
+                    status: status,
+                    created_at: new Date().toISOString(),
+                    metadata: resultData // Store full result including reason/url
                 };
 
-                // Fire and forget - don't await strictly to keep UI snappy
+                // Fire and forget log
                 supabase.from('sku_logs').insert([data]).then(({ error }) => {
                     if (error) console.error('Error logging SKU status:', error);
                 });
 
-                // Also update local storage for immediate UI feedback in other components (legacy support)
+                // Update Local Storage
                 localStorage.setItem(`sku_status_${item.sku}`, JSON.stringify({
-                    status: result,
+                    status: status,
                     timestamp: new Date().toISOString(),
-                    method: 'auto-verified'
+                    method: 'auto-verified-api',
+                    reason: resultData.reason
                 }));
 
-                // Dispatch event for LiveStatusIndicator to pick up
+                // Dispatch update
                 window.dispatchEvent(new Event('sku-status-update'));
 
-                checkedCount++;
-                setProgress({ total: items.length, checked: checkedCount, isComplete: checkedCount === items.length });
+            } catch (error) {
+                console.error('API Check failed:', error);
+                // Mark as error/unknown locally so it stops pulsing
+                localStorage.setItem(`sku_status_${item.sku}`, JSON.stringify({
+                    status: 'unknown',
+                    timestamp: new Date().toISOString(),
+                    method: 'auto-verified-error',
+                    error: true
+                }));
+                window.dispatchEvent(new Event('sku-status-update'));
+            }
 
-                // Next
+            checkedCount++;
+            // Update progress only if not stopped (or maybe just show what we did)
+            setProgress({
+                total: items.length,
+                checked: checkedCount,
+                isComplete: checkedCount === items.length
+            });
+
+            // Next
+            if (!stopRequested.current) {
                 processItem();
-            }, delay);
+            } else {
+                // If stopped, ensure we clean up
+                if (queue.length === 0) {
+                    processingRef.current = false;
+                    setIsScanning(false);
+                }
+            }
         };
 
-        // Start concurrency fan-out (e.g., 5 parallel workers)
-        const WORKERS = 5;
+        // Concurrency: 6 workers (Speed up)
+        const WORKERS = 6;
         for (let i = 0; i < Math.min(WORKERS, queue.length); i++) {
             processItem();
         }
 
     }, []);
 
-    return { startVerification, progress };
+    return { startVerification, stopVerification, isScanning, progress };
 }

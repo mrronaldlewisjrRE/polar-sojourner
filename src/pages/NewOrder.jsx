@@ -208,8 +208,9 @@ export default function NewOrder() {
                             if (!val.includes(':')) return; // Simple guard to wait for selection
 
                             // Parse selection type based on prefix
-                            const [type, ...rest] = val.split(':');
-                            const id = rest.join(':').trim(); // Handle potential multiple colons in desc? No, formatted values.
+                            const parts = val.split(':');
+                            parts.shift(); // Remove type
+                            // const id = parts.join(':').trim(); // Unused
 
                             // Clean value format: "Type: ID - Label"
                             // Actually, simpler to find exact match in data
@@ -314,7 +315,7 @@ export default function NewOrder() {
                                     setRetailerId(val); // Temporary hold of text
                                 }
                             }}
-                            onBlur={(e) => {
+                            onBlur={() => {
                                 // If no match found on blur, effectively acts as "Search"
                                 // We keep the text in state to allow "Add New"
                             }}
@@ -515,23 +516,23 @@ export default function NewOrder() {
             )}
 
             {/* Footer Bar */}
-            <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center justify-between z-10 transition-all">
+            <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex items-center justify-between z-50 transition-all safe-area-pb">
                 <div className="flex items-center gap-3">
                     {selectedDistributor ? (
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600">
-                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Routing to:</span>
-                            <span className="font-bold text-cdh-red dark:text-red-400 flex items-center gap-1">
+                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:inline">Routing to:</span>
+                            <span className="font-bold text-cdh-red dark:text-red-400 flex items-center gap-1 text-sm">
                                 {selectedDistributor.name}
                                 {selectedDistributor.id === 'manual' && <AlertTriangle size={14} className="text-orange-500" />}
                             </span>
                         </div>
                     ) : (
-                        <span className="text-sm text-gray-400 dark:text-gray-500">Select details to see routing</span>
+                        <span className="text-sm text-gray-400 dark:text-gray-500 hidden sm:inline">Select details to see routing</span>
                     )}
                 </div>
                 <button
                     data-testid="submit-order"
-                    className="bg-cdh-red text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-cdh-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+                    className="bg-cdh-red text-white px-6 py-3 rounded-lg font-bold shadow-md hover:bg-cdh-dark active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all touch-manipulation"
                     disabled={!retailerId || !vendorId || !distributorId || items.length === 0}
                     onClick={() => setStep('review')}
                 >

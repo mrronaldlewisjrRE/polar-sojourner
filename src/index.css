@@ -14,3 +14,9 @@
     @apply bg-gray-50 text-gray-900 font-sans;
   }
 }
+
+/* Hide native password reveal on Edge/IE */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

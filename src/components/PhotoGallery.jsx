@@ -19,6 +19,9 @@ export default function PhotoGallery() {
     const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Title'
     const [selectedPhoto, setSelectedPhoto] = useState(null);
 
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+
     // 1. Transform Calendar Events into Photo Objects
     const eventPhotos = events ? events.flatMap(event =>
         (event.images || []).map(img => ({
@@ -51,6 +54,46 @@ export default function PhotoGallery() {
         return a.title.localeCompare(b.title);
     });
 
+    const toggleSelection = (photo) => {
+        if (!photo.isEventPhoto) return; // Cannot select mock photos
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(photo.id)) {
+            newSelected.delete(photo.id);
+        } else {
+            newSelected.add(photo.id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`Delete ${selectedIds.size} selected photos?`)) return;
+
+        // Group by event to minimize updates
+        const photosToDelete = eventPhotos.filter(p => selectedIds.has(p.id));
+        const eventsToUpdate = {};
+
+        photosToDelete.forEach(photo => {
+            if (!eventsToUpdate[photo.eventId]) {
+                eventsToUpdate[photo.eventId] = new Set();
+            }
+            eventsToUpdate[photo.eventId].add(photo.id);
+        });
+
+        // Execute updates
+        Object.entries(eventsToUpdate).forEach(([eventId, imageIds]) => {
+            const event = events.find(e => e.id === eventId);
+            if (event) {
+                const updatedImages = (event.images || []).filter(img => !imageIds.has(img.id));
+                updateEvent(eventId, { images: updatedImages });
+            }
+        });
+
+        // Reset
+        setIsSelectionMode(false);
+        setSelectedIds(new Set());
+    };
+
     const handleDeletePhoto = (e, photo) => {
         e.stopPropagation();
         if (!photo.isEventPhoto || !window.confirm('Delete this photo?')) return;
@@ -66,13 +109,45 @@ export default function PhotoGallery() {
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm gap-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <ImageIcon size={20} className="text-cdh-red" />
-                    Event Gallery
-                    <span className="text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">
-                        {sortedPhotos.length} items
-                    </span>
-                </h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <ImageIcon size={20} className="text-cdh-red" />
+                        Event Gallery
+                        <span className="text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">
+                            {sortedPhotos.length} items
+                        </span>
+                    </h2>
+
+                    {/* Selection Controls */}
+                    {isSelectionMode ? (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={selectedIds.size === 0}
+                                className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                            >
+                                <Trash2 size={12} />
+                                Delete ({selectedIds.size})
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedIds(new Set());
+                                }}
+                                className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setIsSelectionMode(true)}
+                            className="text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            Select Photos
+                        </button>
+                    )}
+                </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     {/* Filter */}
@@ -113,52 +188,82 @@ export default function PhotoGallery() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {sortedPhotos.map((photo) => (
-                        <div
-                            key={photo.id}
-                            className="group relative aspect-video bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-200 dark:border-gray-700"
-                            onClick={() => setSelectedPhoto(photo)}
-                        >
-                            <img
-                                src={photo.url}
-                                alt={photo.title}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                loading="lazy"
-                            />
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                                <div className="flex justify-between items-end">
-                                    <div className="flex-1 min-w-0">
-                                        <span className={cn(
-                                            "text-[10px] font-mono px-1.5 py-0.5 rounded w-fit mb-1 inline-block",
-                                            photo.isEventPhoto ? "bg-blue-500 text-white" : "bg-cdh-red text-white"
+                    {sortedPhotos.map((photo) => {
+                        const isSelected = selectedIds.has(photo.id);
+                        return (
+                            <div
+                                key={photo.id}
+                                className={cn(
+                                    "group relative aspect-video bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer border",
+                                    isSelected
+                                        ? "border-cdh-red ring-2 ring-cdh-red ring-offset-2 dark:ring-offset-gray-900"
+                                        : "border-gray-200 dark:border-gray-700"
+                                )}
+                                onClick={() => isSelectionMode ? toggleSelection(photo) : setSelectedPhoto(photo)}
+                            >
+                                <img
+                                    src={photo.url}
+                                    alt={photo.title}
+                                    className={cn(
+                                        "w-full h-full object-cover transition-transform duration-500",
+                                        !isSelectionMode && "group-hover:scale-105",
+                                        isSelectionMode && !photo.isEventPhoto && "opacity-50 grayscale"
+                                    )}
+                                    loading="lazy"
+                                />
+
+                                {/* Selection Checkbox Overlay */}
+                                {isSelectionMode && photo.isEventPhoto && (
+                                    <div className="absolute top-2 right-2">
+                                        <div className={cn(
+                                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                            isSelected
+                                                ? "bg-cdh-red border-cdh-red text-white"
+                                                : "bg-black/30 border-white text-transparent hover:bg-black/50"
                                         )}>
-                                            {photo.category}
-                                        </span>
-                                        <h3 className="text-white font-medium truncate text-sm">{photo.title}</h3>
-                                        <p className="text-gray-300 text-[10px] flex items-center gap-1">
-                                            <Calendar size={10} /> {photo.date}
-                                        </p>
+                                            <div className="w-2.5 h-2.5 bg-current rounded-full" />
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                )}
 
-                            {/* Actions */}
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1.5 rounded-full text-white">
-                                <Maximize2 size={14} />
-                            </div>
+                                {/* Normal Overlay (Hidden in selection mode) */}
+                                {!isSelectionMode && (
+                                    <>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                                            <div className="flex justify-between items-end">
+                                                <div className="flex-1 min-w-0">
+                                                    <span className={cn(
+                                                        "text-[10px] font-mono px-1.5 py-0.5 rounded w-fit mb-1 inline-block",
+                                                        photo.isEventPhoto ? "bg-blue-500 text-white" : "bg-cdh-red text-white"
+                                                    )}>
+                                                        {photo.category}
+                                                    </span>
+                                                    <h3 className="text-white font-medium truncate text-sm">{photo.title}</h3>
+                                                    <p className="text-gray-300 text-[10px] flex items-center gap-1">
+                                                        <Calendar size={10} /> {photo.date}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            {photo.isEventPhoto && (
-                                <button
-                                    onClick={(e) => handleDeletePhoto(e, photo)}
-                                    className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full"
-                                    title="Delete Photo"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1.5 rounded-full text-white">
+                                            <Maximize2 size={14} />
+                                        </div>
+
+                                        {photo.isEventPhoto && (
+                                            <button
+                                                onClick={(e) => handleDeletePhoto(e, photo)}
+                                                className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full"
+                                                title="Delete Photo"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

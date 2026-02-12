@@ -7,7 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 
 import { DataProvider } from './contexts/DataContext'
 
-console.log("CDH App Version: 5A.2.5-Cache-Cleanup");
+console.log("CDH App Version: 5A.2.5-Explicit-Router");
 
 // FORCE CLEANUP: Unregister any service workers
 if ('serviceWorker' in navigator) {

@@ -18,7 +18,7 @@ export default function SKUTrackerDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
 
     // Auto-Verification Hook
-    const { startVerification, progress } = useLiveVerification();
+    const { startVerification, stopVerification, isScanning, progress } = useLiveVerification();
 
     useEffect(() => {
         // Trigger verification for all items on mount (simulate live check)
@@ -194,18 +194,29 @@ export default function SKUTrackerDashboard() {
                         <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor product availability across verified vendor sites.</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        {/* Run Button */}
+                        {/* Run/Stop Button */}
                         <button
-                            onClick={handleRunCheck}
-                            disabled={!progress.isComplete}
+                            onClick={isScanning ? stopVerification : handleRunCheck}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-all
-                                ${!progress.isComplete
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                                    : 'bg-cdh-red text-white hover:bg-red-700 hover:shadow-md'
+                                ${isScanning
+                                    ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                                    : 'bg-cdh-red text-white hover:bg-black hover:shadow-md'
                                 }`}
                         >
-                            <RefreshCw size={18} className={!progress.isComplete ? 'animate-spin' : ''} />
-                            {progress.isComplete ? 'Run Live Check' : 'Checking...'}
+                            {isScanning ? (
+                                <>
+                                    <span className="relative flex h-3 w-3 mr-1">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                    </span>
+                                    Stop Check
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshCw size={18} />
+                                    Run Live Check
+                                </>
+                            )}
                         </button>
 
                         {/* Status Pivot "Table" Control */}
@@ -244,14 +255,17 @@ export default function SKUTrackerDashboard() {
                 {/* Verification Progress */}
                 {!progress.isComplete && progress.total > 0 && (
                     <div className="mt-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                        <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="flex-1 h-3 bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-full overflow-hidden border border-white/20 shadow-inner">
                             <div
-                                className="h-full bg-yellow-400 transition-all duration-300 ease-out"
+                                className="h-full bg-gradient-to-r from-yellow-400 to-yellow-200 relative transition-all duration-300 ease-out shadow-[0_0_10px_rgba(250,204,21,0.7)]"
                                 style={{ width: `${(progress.checked / progress.total) * 100}%` }}
-                            />
+                            >
+                                {/* Gloss effect */}
+                                <div className="absolute inset-0 bg-white/30 skew-x-12 -ml-4 w-full"></div>
+                            </div>
                         </div>
-                        <span className="text-xs font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            Checking {progress.checked}/{progress.total}
+                        <span className="text-xs font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap box-border px-2 py-1 rounded bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur">
+                            {progress.checked}/{progress.total}
                         </span>
                     </div>
                 )}
@@ -362,7 +376,20 @@ export default function SKUTrackerDashboard() {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    {getTimeAgo(item.lastChecked)}
+                                    <div className="flex items-center gap-2">
+                                        <span>{getTimeAgo(item.lastChecked)}</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                startVerification([item]);
+                                            }}
+                                            disabled={isScanning || item.status === 'checking'}
+                                            className="p-1 text-gray-400 hover:text-cdh-red dark:hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            title="Check this item now"
+                                        >
+                                            <RefreshCw size={14} className={item.status === 'checking' ? 'animate-spin' : ''} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
