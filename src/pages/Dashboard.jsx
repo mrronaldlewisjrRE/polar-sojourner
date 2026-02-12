@@ -97,7 +97,16 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 overflow-auto -mx-2 px-2 space-y-3">
                         {orders.length === 0 && (
-                            <p className="text-gray-500 text-center py-4">No orders yet.</p>
+                            <div className="flex flex-col items-center justify-center py-8 text-center bg-gray-50 dark:bg-gray-700/30 rounded-lg border-2 border-dashed border-gray-100 dark:border-gray-600">
+                                <div className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-sm mb-3">
+                                    <FileText className="text-gray-400 dark:text-gray-500" size={24} />
+                                </div>
+                                <p className="text-gray-500 dark:text-gray-400 font-medium mb-1">No orders yet</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 max-w-[200px]">Get started by creating your first purchase order.</p>
+                                <Link to="/new-order" className="text-xs font-semibold text-cdh-red hover:text-cdh-dark hover:underline">
+                                    Create New Order &rarr;
+                                </Link>
+                            </div>
                         )}
                         {orders.slice(0, 10).map((order) => {
                             const dist = distributors.find(d => d.id === order.distributorId);

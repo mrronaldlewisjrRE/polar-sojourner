@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import LiveStatusIndicator from '../components/LiveStatusIndicator';
 import { Search, Trash2, Plus, ArrowRight, CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
@@ -6,8 +6,11 @@ import { Link } from 'react-router-dom';
 import ProductSearchButton from '../components/ProductSearchButton';
 import PortalSubmissionModal from '../components/PortalSubmissionModal';
 
+import { useToast } from '../contexts/ToastContext';
+
 export default function NewOrder() {
     const { retailers: RETAILERS, vendors: VENDORS, distributors: DISTRIBUTORS, products: PRODUCTS, addOrder } = useData();
+    const toast = useToast();
     const [step, setStep] = useState('entry'); // 'entry', 'review', 'submitted'
     const [retailerId, setRetailerId] = useState('');
     const [vendorId, setVendorId] = useState('');
@@ -151,6 +154,23 @@ export default function NewOrder() {
         setStep('submitted');
     };
 
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                if (step === 'entry' && selectedRetailer && selectedVendor && items.length > 0) {
+                    setStep('review');
+                } else if (step === 'review') {
+                    onSubmitOrder();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step, selectedRetailer, selectedVendor, items]); // dependencies related to logic, omitting onSubmitOrder to avoid re-bind loop
+
     if (step === 'submitted') {
         return <SubmissionSuccess reset={() => window.location.reload()} />;
     }
@@ -228,7 +248,7 @@ export default function NewOrder() {
                             const distMatch = DISTRIBUTORS.find(d => `Distributor: ${d.name}` === val);
                             if (distMatch) {
                                 if (!vendorId) {
-                                    alert('Please select a Vendor first before setting Distributor (or use Auto-Routing).');
+                                    toast.warning('Please select a Vendor first before setting Distributor (or use Auto-Routing).');
                                     e.target.value = '';
                                     return;
                                 }

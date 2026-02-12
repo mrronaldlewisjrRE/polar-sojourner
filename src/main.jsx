@@ -6,6 +6,7 @@ import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary'
 
 import { DataProvider } from './contexts/DataContext'
+import { ToastProvider } from './contexts/ToastContext'
 
 console.log("CDH App Version: 5A.2.5-Explicit-Router");
 
@@ -22,9 +23,11 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <DataProvider>
-        <App />
-      </DataProvider>
+      <ToastProvider>
+        <DataProvider>
+          <App />
+        </DataProvider>
+      </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

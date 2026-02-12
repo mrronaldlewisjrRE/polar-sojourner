@@ -3,6 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { cn } from '../lib/utils';
 import { Filter, Search, Plus, MoreHorizontal, X, LayoutList, Image as ImageIcon } from 'lucide-react';
 import PhotoGallery from '../components/PhotoGallery';
+import { useToast } from '../contexts/ToastContext';
 
 import { useSearchParams } from 'react-router-dom';
 
@@ -163,25 +164,50 @@ export default function VendorManagement() {
                                             />
                                         </td>
                                     </tr>
+
                                 ))}
+                                {filteredVendors.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                            <div className="flex flex-col items-center justify-center gap-2">
+                                                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-full mb-1">
+                                                    <Filter className="text-gray-400 dark:text-gray-500" size={20} />
+                                                </div>
+                                                <p className="font-medium">No vendors found</p>
+                                                <p className="text-sm">Try adjusting your filters or search terms.</p>
+                                                {(searchTerm || filterStatus !== 'All') && (
+                                                    <button
+                                                        onClick={() => { setSearchTerm(''); setFilterStatus('All'); }}
+                                                        className="text-sm font-semibold text-cdh-red hover:underline mt-1"
+                                                    >
+                                                        Reset Filters
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </>
-            )}
+            )
+            }
 
-            {isModalOpen && (
-                <VendorModal
-                    vendor={editingVendor}
-                    onClose={closeModal}
-                    onSave={(data) => {
-                        if (editingVendor) updateVendor(editingVendor.id, data);
-                        else addVendor(data);
-                        closeModal();
-                    }}
-                />
-            )}
-        </div>
+            {
+                isModalOpen && (
+                    <VendorModal
+                        vendor={editingVendor}
+                        onClose={closeModal}
+                        onSave={(data) => {
+                            if (editingVendor) updateVendor(editingVendor.id, data);
+                            else addVendor(data);
+                            closeModal();
+                        }}
+                    />
+                )
+            }
+        </div >
     );
 }
 
@@ -198,6 +224,7 @@ function StatusToggle({ status }) {
 }
 
 function VendorActions({ isOpen, onToggle, onClose, onEdit }) {
+    const toast = useToast();
     return (
         <div className="relative inline-block text-left">
             <button
@@ -211,7 +238,7 @@ function VendorActions({ isOpen, onToggle, onClose, onEdit }) {
                     <div className="fixed inset-0 z-10" onClick={onClose}></div>
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-100 dark:border-gray-700 z-20 py-1 origin-top-right animate-in fade-in zoom-in-95 duration-100">
                         <button
-                            onClick={(e) => { e.stopPropagation(); onClose(); alert('View Details clicked'); }}
+                            onClick={(e) => { e.stopPropagation(); onClose(); toast.info('View Details clicked'); }}
                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                             View Details
@@ -224,7 +251,7 @@ function VendorActions({ isOpen, onToggle, onClose, onEdit }) {
                         </button>
                         <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
                         <button
-                            onClick={(e) => { e.stopPropagation(); onClose(); alert('Deactivate Vendor clicked'); }}
+                            onClick={(e) => { e.stopPropagation(); onClose(); toast.info('Deactivate Vendor clicked'); }}
                             className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                             Deactivate Vendor

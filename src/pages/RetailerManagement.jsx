@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
 import RetailerSearchModal from '../components/RetailerSearchModal';
+import { useToast } from '../contexts/ToastContext';
 
 export default function RetailerManagement() {
     const { retailers, addRetailer, updateRetailer, deleteRetailer, toggleRetailerFavorite } = useData();
@@ -188,7 +189,26 @@ export default function RetailerManagement() {
                         </div>
                     );
                 })}
+
             </div>
+
+            {filteredRetailers.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-full mb-3">
+                        <Search className="text-gray-400 dark:text-gray-500" size={24} />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">No retailers found</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                        We couldn't find any retailers matching "{searchTerm}". Try adjusting your search query.
+                    </p>
+                    <button
+                        onClick={() => setSearchTerm('')}
+                        className="mt-4 text-sm font-semibold text-cdh-red hover:underline"
+                    >
+                        Clear Search
+                    </button>
+                </div>
+            )}
 
             {isModalOpen && (
                 <RetailerModal
@@ -232,6 +252,7 @@ const levenshtein = (a, b) => {
 };
 
 function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
+    const toast = useToast();
     const [formData, setFormData] = useState({
         name: retailer?.name || '',
         location: retailer?.location || '',
@@ -267,7 +288,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                 accounts: parsedAccounts
             });
         } catch {
-            alert('Invalid JSON for accounts. Please check format.');
+            toast.error('Invalid JSON for accounts. Please check format.');
         }
     };
 

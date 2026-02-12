@@ -1,6 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, PlusCircle, Users, BarChart3, Menu, ShoppingBag, Box, ClipboardCheck, Sun, Moon, ArrowUp, ArrowDown, Activity, CalendarDays, LogOut, MessageCircle } from 'lucide-react';
+import {
+    LayoutDashboard,
+    PlusCircle,
+    Users,
+    BarChart3,
+    Menu,
+    ShoppingBag,
+    Box,
+    ClipboardCheck,
+    Sun,
+    Moon,
+    ArrowUp,
+    ArrowDown,
+    Activity,
+    CalendarDays,
+    LogOut,
+    MessageCircle,
+    Database
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate, Link, NavLink, Outlet } from 'react-router-dom';
 import ChatInterface from './ChatInterface';
@@ -46,6 +64,11 @@ export default function Layout() {
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+            {/* Skip Link */}
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-cdh-red border border-cdh-red rounded-br-lg transition-all">
+                Skip to Content
+            </a>
+
             {/* Sidebar (Desktop) */}
             <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col transition-colors duration-200">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -148,7 +171,7 @@ export default function Layout() {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div id="main-content" className="flex-1 flex flex-col overflow-hidden relative">
                 {/* ... header and main ... */}
                 {/* Mobile Header */}
                 <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between md:hidden">
@@ -258,7 +281,7 @@ function NavItem({ to, icon, label, onClick }) {
                     ? "bg-cdh-red text-white shadow-sm dark:bg-red-900/50 dark:text-red-100"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
             )}
-            data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
+            data-testid={`nav - ${label.toLowerCase().replace(/\s+/g, '-')} `}
         >
             {icon}
             <span>{label}</span>

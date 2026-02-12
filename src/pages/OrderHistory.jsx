@@ -182,9 +182,22 @@ export default function OrderHistory() {
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 flex flex-col items-center justify-center gap-2">
-                                        <Clock size={32} className="text-gray-300 dark:text-gray-600" />
-                                        <p>No orders found.</p>
+                                    <td colSpan="8" className="p-0 border-none">
+                                        <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl border-t border-gray-100 dark:border-gray-700">
+                                            <div className="p-4 bg-white dark:bg-gray-800 rounded-full shadow-sm mb-3">
+                                                <Search className="text-gray-400 dark:text-gray-500" size={24} />
+                                            </div>
+                                            <p className="font-medium text-gray-900 dark:text-gray-200">No orders found</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Try adjusting your search or filters.</p>
+                                            {(searchTerm || statusFilter !== 'All') && (
+                                                <button
+                                                    onClick={() => { setSearchTerm(''); setStatusFilter('All'); }}
+                                                    className="mt-4 text-sm text-cdh-red font-semibold hover:underline"
+                                                >
+                                                    Clear Filters
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )}
