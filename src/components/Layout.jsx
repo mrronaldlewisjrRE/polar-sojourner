@@ -223,7 +223,7 @@ export default function Layout() {
                             CDH Platform — Internal Use Only
                         </p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-600 font-mono">
-                            v5A.3 HOTFIX | Build: {new Date().toLocaleDateString()}
+                            v5A.3-CLEANUP | Build: {new Date().toLocaleDateString()}
                         </p>
                     </footer>
                 </main>
