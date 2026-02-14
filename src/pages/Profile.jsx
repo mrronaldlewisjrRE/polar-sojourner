@@ -40,66 +40,68 @@ export default function Profile() {
                 .eq('id', user.id)
                 .single();
 
-            if (error && error.code !== 'PGRST116') {
-                console.warn('Error fetching profile:', error.message);
-            }
-
             if (data) {
                 setFullName(data.full_name || '');
                 setAvatarUrl(data.avatar_url);
                 setBio(data.bio || '');
                 setContactInfo(data.contact_info || '');
                 setIsOnline(data.is_online ?? true);
+
+                // Set initial role from DB
                 setRole(data.role || 'viewer');
 
-                // Bootstrap Admin: Check role OR specific email
-                const isBootstrapAdmin = (user.email === 'ronald@cdhassociates.com');
-                const finalRole = isBootstrapAdmin ? 'admin' : (data.role || 'viewer');
+                // Bootstrap Logic: If email matches, FORCE admin rights and fetch team
+                const isBootstrap = user.email === 'ronald@cdhassociates.com';
 
-                setRole(finalRole);
-
-                // If admin (or bootstrap), fetch all users
-                if (finalRole === 'admin') {
-                    const { data: allUsers, error: usersError } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .order('full_name', { ascending: true });
-
-                    if (usersError) console.error('Error fetching users:', usersError);
-                    else setUsers(allUsers || []);
+                if (data.role === 'admin' || isBootstrap) {
+                    // Update local role state to reflect admin privileges
+                    if (isBootstrap && data.role !== 'admin') {
+                        setRole('admin');
+                    }
+                    fetchTeam();
                 }
             }
         } catch (err) {
             console.error(err);
-            setError("Failed to load profile data");
         } finally {
             setLoading(false);
         }
     }, [user]);
 
+    const fetchTeam = async () => {
+        const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('full_name', { ascending: true });
+
+        if (data) setUsers(data);
+    };
+
     useEffect(() => {
-        if (user) {
-            getProfile();
-        }
+        if (user) getProfile();
     }, [user, getProfile]);
 
     async function toggleAdminRole(targetUserId, currentRole) {
-        try {
-            const newRole = currentRole === 'admin' ? 'viewer' : 'admin';
-            const { error } = await supabase
-                .from('profiles')
-                .update({ role: newRole })
-                .eq('id', targetUserId);
+        // Toggle Logic
+        const newRole = currentRole === 'admin' ? 'viewer' : 'admin';
 
-            if (error) throw error;
+        // Optimistic Update
+        setUsers(users.map(u => u.id === targetUserId ? { ...u, role: newRole } : u));
+        if (targetUserId === user.id) setRole(newRole);
 
-            // Update local state
-            setUsers(users.map(u => u.id === targetUserId ? { ...u, role: newRole } : u));
+        const { error } = await supabase
+            .from('profiles')
+            .update({ role: newRole })
+            .eq('id', targetUserId);
+
+        if (error) {
+            console.error('Error updating role:', error);
+            setMessage('Failed to update role in database');
+            // Revert on error
+            fetchTeam();
+        } else {
             setMessage(`User role updated to ${newRole}`);
             setTimeout(() => setMessage(null), 3000);
-        } catch (err) {
-            console.error('Error updating role:', err);
-            setError('Failed to update user role');
         }
     }
 
@@ -107,24 +109,20 @@ export default function Profile() {
         e.preventDefault();
         try {
             setSaving(true);
-            setError(null);
-            setMessage(null);
 
-            // 1. Update Password (if provided)
+            // Password Update
             if (newPassword) {
-                if (newPassword.length < 6) throw new Error("Password must be at least 6 characters");
+                if (newPassword.length < 6) throw new Error("Password too short");
                 if (newPassword !== confirmPassword) throw new Error("Passwords do not match");
 
-                const { error: passwordError } = await supabase.auth.updateUser({
-                    password: newPassword
-                });
+                const { error: pwdError } = await supabase.auth.updateUser({ password: newPassword });
+                if (pwdError) throw pwdError;
 
-                if (passwordError) throw passwordError;
                 setNewPassword('');
                 setConfirmPassword('');
             }
 
-            // 2. Update Profile (Name/Avatar/Bio/Contact/Status)
+            // Profile Update
             const updates = {
                 id: user.id,
                 full_name: fullName,
@@ -135,12 +133,13 @@ export default function Profile() {
                 updated_at: new Date(),
             };
 
-            const { error: profileError } = await supabase.from('profiles').upsert(updates);
-            if (profileError) throw profileError;
+            const { error } = await supabase.from('profiles').upsert(updates);
+            if (error) throw error;
 
             setMessage('Profile updated successfully!');
         } catch (error) {
-            setError(error.message);
+            console.error(error);
+            setMessage(error.message || 'Error updating profile');
         } finally {
             setSaving(false);
         }
