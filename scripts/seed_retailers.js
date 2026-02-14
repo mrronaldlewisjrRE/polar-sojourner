@@ -1,65 +1,49 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { RETAILERS } from '../src/data/retailers.js';
+import { RETAILERS } from '../src/data/retailers.js'; // Import original data
 
-// Load Environment Variables
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config();
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error("❌ Missing Supabase Credentials in .env");
-    process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function seedRetailers() {
-    console.log(`📦 Preparing to seed ${RETAILERS.length} retailers...`);
+    console.log(`Preparing to seed ${RETAILERS.length} retailers...`);
 
-    // Batch insert to avoid payload limits
+    // Transform to snake_case for DB
+    const dbRetailers = RETAILERS.map(r => ({
+        id: r.id.toString(), // Ensure string ID
+        name: r.name,
+        location: r.location,
+        address: r.address,
+        city: r.city,
+        state: r.state,
+        zip: r.zip ? r.zip.toString() : null,
+        warehouse_code: r.warehouseCode,
+        contact_name: r.contactName,
+        email: r.email,
+        phone: r.phone,
+        cell: r.cell,
+        notes: r.notes,
+        accounts: r.accounts || {},
+        is_favorite: false
+    }));
+
+    // Batch insert (Supabase limit is usually high, but let's do batches of 100)
     const BATCH_SIZE = 100;
-    let successful = 0;
-    let failed = 0;
-
-    for (let i = 0; i < RETAILERS.length; i += BATCH_SIZE) {
-        const batch = RETAILERS.slice(i, i + BATCH_SIZE).map(r => ({
-            id: r.id.toString(), // Ensure string
-            name: r.name,
-            address: r.address,
-            city: r.city,
-            state: r.state,
-            zip: r.zip ? r.zip.toString() : null,
-            contact_name: r.contactName, // Map camelCase to snake_case
-            email: r.email,
-            phone: r.phone,
-            notes: r.notes,
-            // Assuming 'accounts' is a JSONB column or we skip it for now
-            // If schema doesn't have 'accounts', this might error if we send it?
-            // Let's strip it unless we know schema has it.
-            // Check schema first, but safe to omit if not needed for Geocoding.
-        }));
-
-        const { error } = await supabase
-            .from('retailers')
-            .upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
+    for (let i = 0; i < dbRetailers.length; i += BATCH_SIZE) {
+        const batch = dbRetailers.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.from('retailers').upsert(batch, { onConflict: 'id' });
 
         if (error) {
-            console.error(`❌ Batch ${i} failed:`, error.message);
-            failed += batch.length;
+            console.error(`Error inserting batch ${i}:`, error);
         } else {
-            process.stdout.write('.'); // Progress dot
-            successful += batch.length;
+            console.log(`Inserted batch ${i} - ${i + batch.length}`);
         }
     }
 
-    console.log(`\n\n✅ Seeding Complete!`);
-    console.log(`👍 Indexed: ${successful}`);
-    console.log(`👎 Failed: ${failed}`);
+    console.log("Seeding complete.");
 }
 
 seedRetailers();

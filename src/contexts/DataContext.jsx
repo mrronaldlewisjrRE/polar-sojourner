@@ -129,15 +129,47 @@ export const DataProvider = ({ children }) => {
     };
 
     const updateRetailer = async (id, updates) => {
-        const { error } = await supabase.from('retailers').update(updates).eq('id', id);
+        // MAP Frontend (camelCase) -> DB (snake_case)
+        const dbUpdates = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.location !== undefined) dbUpdates.location = updates.location;
+        if (updates.address !== undefined) dbUpdates.address = updates.address;
+        if (updates.city !== undefined) dbUpdates.city = updates.city;
+        if (updates.state !== undefined) dbUpdates.state = updates.state;
+        if (updates.zip !== undefined) dbUpdates.zip = updates.zip;
+        if (updates.warehouseCode !== undefined) dbUpdates.warehouse_code = updates.warehouseCode;
+        if (updates.contactName !== undefined) dbUpdates.contact_name = updates.contactName;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.cell !== undefined) dbUpdates.cell = updates.cell;
+        if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+        if (updates.accounts !== undefined) dbUpdates.accounts = updates.accounts;
+        if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite;
+
+        const { error } = await supabase.from('retailers').update(dbUpdates).eq('id', id);
         if (error) console.error("Error updating retailer:", error);
+
+        // Optimistic Update
+        setRetailers(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
     };
 
     const toggleRetailerFavorite = async (id) => {
         const retailer = retailers.find(r => r.id === id);
         if (retailer) {
-            const { error } = await supabase.from('retailers').update({ is_favorite: !retailer.is_favorite }).eq('id', id);
-            if (error) console.error("Error toggling favorite:", error);
+            const oldStatus = retailer.isFavorite;
+            const newStatus = !oldStatus;
+
+            // 1. Optimistic Update (Immediate)
+            setRetailers(prev => prev.map(r => r.id === id ? { ...r, isFavorite: newStatus } : r));
+
+            // 2. DB Update
+            const { error } = await supabase.from('retailers').update({ is_favorite: newStatus }).eq('id', id);
+
+            // 3. Revert on Error
+            if (error) {
+                console.error("Error toggling favorite:", error);
+                setRetailers(prev => prev.map(r => r.id === id ? { ...r, isFavorite: oldStatus } : r));
+            }
         }
     };
 

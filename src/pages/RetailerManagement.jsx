@@ -116,13 +116,7 @@ export default function RetailerManagement() {
                         <div key={retailer.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition-all relative group">
 
                             {/* Favorite Toggle (Top Right) */}
-                            <button
-                                onClick={() => toggleRetailerFavorite(retailer.id)}
-                                className={`absolute top-4 right-12 z-10 p-1.5 rounded-full transition-colors ${retailer.isFavorite ? 'text-yellow-400 hover:text-yellow-500' : 'text-gray-300 hover:text-yellow-400 dark:text-gray-600'}`}
-                                title={retailer.isFavorite ? "Remove favorite" : "Add to favorites"}
-                            >
-                                <Star size={18} className={retailer.isFavorite ? "fill-current" : ""} />
-                            </button>
+
 
                             {/* Missing Data Warning Badge */}
                             {isManualReview && (
@@ -154,6 +148,13 @@ export default function RetailerManagement() {
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
+                                    <button
+                                        onClick={() => toggleRetailerFavorite(retailer.id)}
+                                        className={`p-1.5 rounded-md transition-colors ${retailer.isFavorite ? 'text-yellow-400 hover:text-yellow-500' : 'text-gray-400 hover:text-yellow-400 dark:text-gray-600'} hover:bg-yellow-50 dark:hover:bg-yellow-900/20`}
+                                        title={retailer.isFavorite ? "Remove favorite" : "Add to favorites"}
+                                    >
+                                        <Star size={16} className={retailer.isFavorite ? "fill-current" : ""} />
+                                    </button>
                                     <button onClick={() => handleEdit(retailer)} className="p-1.5 text-gray-400 hover:text-cdh-red dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                         <Edit2 size={16} />
                                     </button>
@@ -296,12 +297,12 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 transition-colors">
-                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 transition-colors">
+                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-none">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white"><X size={24} /></button>
                 </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
                         <input
@@ -351,7 +352,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                             onChange={e => setFormData({ ...formData, accounts: e.target.value })}
                         />
                     </div>
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
                         <button type="submit" className="px-6 py-2 bg-cdh-red text-white font-medium rounded-lg hover:bg-cdh-dark">Save Retailer</button>
                     </div>
