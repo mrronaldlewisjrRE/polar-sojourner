@@ -1,45 +1,48 @@
 export default async function handler(req, res) {
     const { query, location } = req.query;
 
-    if (!query) {
-        return res.status(400).json({ error: "Query is required" });
+    if (!query || !location) {
+        return res.status(400).json({ error: "Query and location required" });
     }
 
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.YELP_API_KEY;
 
     if (!apiKey) {
-        console.error("Missing GOOGLE_PLACES_API_KEY");
-        return res.status(500).json({ error: "Server configuration error" });
+        console.error("Missing YELP_API_KEY");
+        return res.status(500).json({ error: "Server configuration error (Missing API Key)" });
     }
 
-    const searchQuery = location ? `${query} in ${location}` : query;
-    // Using Text Search (New) or Text Search (Legacy)? 
-    // User snippet used `https://maps.googleapis.com/maps/api/place/textsearch/json`. This is the Legacy API but still widely used.
-    // The new one is `https://places.googleapis.com/v1/places:searchText`.
-    // I will stick to the user's requested URL structure for compatibility with their key/expectations.
-
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
-
     try {
-        const response = await fetch(url);
+        const response = await fetch(
+            `https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}&limit=20`,
+            {
+                headers: {
+                    Authorization: `Bearer ${apiKey}`
+                }
+            }
+        );
+
         const data = await response.json();
 
-        if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-            console.error("Google API Error:", data);
-            return res.status(500).json({ error: data.error_message || "Google Places API error" });
+        if (data.error) {
+            console.error("Yelp API Error:", data.error);
+            return res.status(400).json({ error: data.error.description || "Yelp API Error" });
         }
 
-        if (!data.results) {
+        if (!data.businesses) {
             return res.status(200).json([]);
         }
 
-        const retailers = data.results.map(place => ({
-            name: place.name,
-            address: place.formatted_address,
-            rating: place.rating || null,
-            place_id: place.place_id,
-            location: place.geometry?.location || null,
-            types: place.types || []
+        const retailers = data.businesses.map(business => ({
+            id: business.id,
+            name: business.name,
+            address: business.location.display_address.join(", "),
+            phone: business.display_phone,
+            rating: business.rating,
+            review_count: business.review_count,
+            categories: business.categories.map(c => c.title),
+            image_url: business.image_url,
+            url: business.url
         }));
 
         res.status(200).json(retailers);

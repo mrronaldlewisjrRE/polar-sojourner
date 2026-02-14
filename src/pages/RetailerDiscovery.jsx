@@ -17,7 +17,10 @@ export default function RetailerDiscovery() {
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        if (!query.trim()) return;
+        if (!query.trim() || !location.trim()) {
+            toast.error("Please enter both a search term and a location.");
+            return;
+        }
 
         setLoading(true);
         setSearched(true);
@@ -25,8 +28,7 @@ export default function RetailerDiscovery() {
 
         try {
             // Call our Vercel Serverless Function
-            // Note: In local Vite dev (npm run dev), this path /api/... might 404 unless proxy is set up.
-            // But it will work on Vercel or with `vercel dev`.
+            // This function will now query the Yelp Fusion API
             const res = await fetch(`/api/searchRetailers?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`);
 
             if (!res.ok) {
@@ -44,36 +46,36 @@ export default function RetailerDiscovery() {
         }
     };
 
-    const handleImport = (place) => {
+    const handleImport = (business) => {
         const newRetailer = {
-            name: place.name,
-            location: location || extractCityState(place.address) || 'Unknown Location',
-            address: place.address,
+            name: business.name,
+            location: location || 'Unknown Location',
+            address: business.address,
             warehouseCode: 'TBD',
-            notes: `Imported from Google Places. Place ID: ${place.place_id}. Rating: ${place.rating}`,
+            notes: `Imported from Yelp. Yelp ID: ${business.id}. Rating: ${business.rating} (${business.review_count} reviews). Phone: ${business.phone}`,
             accounts: {}
         };
 
         addRetailer(newRetailer);
-        toast.success(`Imported ${place.name}`);
+        toast.success(`Imported ${business.name}`);
     };
 
     // Helper to try and pull "City, State" from the formatted address string
     // Google formatted_address usually looks like "123 Main St, Nashville, TN 37209, USA"
     // This is a naive heuristic
-    const extractCityState = (address) => {
-        if (!address) return '';
-        const parts = address.split(',').map(p => p.trim());
-        // If we have > 2 parts, assume second to last is state/zip and third to last is city? 
-        // Or just return the whole address if it's short.
-        if (parts.length >= 2) {
-            // Return "City, State" roughly
-            const stateZip = parts[parts.length - 2];
-            const city = parts[parts.length - 3];
-            if (city && stateZip) return `${city}, ${stateZip.split(' ')[0]}`; // Split zip off state
-        }
-        return address;
-    };
+    // const extractCityState = (address) => {
+    //     if (!address) return '';
+    //     const parts = address.split(',').map(p => p.trim());
+    //     // If we have > 2 parts, assume second to last is state/zip and third to last is city? 
+    //     // Or just return the whole address if it's short.
+    //     if (parts.length >= 2) {
+    //         // Return "City, State" roughly
+    //         const stateZip = parts[parts.length - 2];
+    //         const city = parts[parts.length - 3];
+    //         if (city && stateZip) return `${city}, ${stateZip.split(' ')[0]}`; // Split zip off state
+    //     }
+    //     return address;
+    // };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -87,7 +89,7 @@ export default function RetailerDiscovery() {
                 </button>
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Retailer Discovery</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Find and import retailers using Google Places.</p>
+                    <p className="text-gray-500 dark:text-gray-400">Find and import retailers using Yelp Fusion.</p>
                 </div>
             </div>
 
@@ -95,7 +97,7 @@ export default function RetailerDiscovery() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <form onSubmit={handleSearch} className="grid md:grid-cols-[2fr_1fr_auto] gap-4">
                     <div className="relative">
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Search Term</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Business Type / Name</label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <input
@@ -109,7 +111,7 @@ export default function RetailerDiscovery() {
                     </div>
 
                     <div className="relative">
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Location</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">City, State or Zip</label>
                         <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <input
@@ -125,7 +127,7 @@ export default function RetailerDiscovery() {
                     <div className="flex items-end">
                         <button
                             type="submit"
-                            disabled={loading || !query}
+                            disabled={loading || !query || !location}
                             className="w-full md:w-auto h-[42px] px-6 bg-cdh-red text-white font-semibold rounded-lg hover:bg-cdh-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
@@ -146,7 +148,7 @@ export default function RetailerDiscovery() {
                 {loading && (
                     <div className="py-20 flex flex-col items-center justify-center text-gray-400">
                         <Loader2 className="animate-spin mb-4 text-cdh-red" size={48} />
-                        <p>Searching Google Places...</p>
+                        <p>Searching Yelp...</p>
                     </div>
                 )}
 
@@ -160,24 +162,38 @@ export default function RetailerDiscovery() {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {results.map((place) => (
-                        <div key={place.place_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all group flex flex-col h-full">
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg">
-                                    <Building size={24} />
-                                </div>
+                        <div key={place.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative overflow-hidden">
+
+                            <div className="flex justify-between items-start mb-3">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1 flex-1 mr-2" title={place.name}>{place.name}</h3>
                                 {place.rating && (
-                                    <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-full">
-                                        <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                                    <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full shrink-0">
+                                        <Star size={12} className="fill-red-500 text-red-500" />
                                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{place.rating}</span>
+                                        <span className="text-[10px] text-gray-400">({place.review_count})</span>
                                     </div>
                                 )}
                             </div>
 
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1" title={place.name}>{place.name}</h3>
-
-                            <div className="flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-4 flex-1">
-                                <MapPin size={16} className="shrink-0 mt-0.5" />
-                                <span className="line-clamp-2">{place.address}</span>
+                            <div className="flex-1 space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                <div className="flex items-start gap-2">
+                                    <MapPin size={16} className="shrink-0 mt-0.5" />
+                                    <span className="line-clamp-2">{place.address}</span>
+                                </div>
+                                {place.phone && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500">{place.phone}</span>
+                                    </div>
+                                )}
+                                {place.categories && place.categories.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {place.categories.slice(0, 3).map((cat, idx) => (
+                                            <span key={idx} className="text-[10px] uppercase font-bold tracking-wider text-gray-500 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded">
+                                                {cat}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <button
