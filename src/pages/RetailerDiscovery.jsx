@@ -46,7 +46,7 @@ export default function RetailerDiscovery() {
         }
     };
 
-    const handleImport = (business) => {
+    const handleImport = async (business) => {
         const newRetailer = {
             name: business.name,
             location: location || 'Unknown Location',
@@ -56,8 +56,13 @@ export default function RetailerDiscovery() {
             accounts: {}
         };
 
-        addRetailer(newRetailer);
-        toast.success(`Imported ${business.name}`);
+        try {
+            await addRetailer(newRetailer);
+            toast.success(`Imported ${business.name}`);
+        } catch (error) {
+            console.error(error);
+            toast.error(`Failed to import ${business.name}. See console.`);
+        }
     };
 
     // Helper to try and pull "City, State" from the formatted address string

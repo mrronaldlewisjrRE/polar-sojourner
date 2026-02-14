@@ -33,7 +33,16 @@ export const DataProvider = ({ children }) => {
 
                 // Only override mock data if DB has actual data
                 if (vData.data && vData.data.length > 0) setVendors(vData.data);
-                if (rData.data && rData.data.length > 0) setRetailers(rData.data);
+                if (rData.data && rData.data.length > 0) {
+                    // MAP DB (snake_case) -> Frontend (camelCase)
+                    const mappedRetailers = rData.data.map(r => ({
+                        ...r,
+                        warehouseCode: r.warehouse_code, // Map back
+                        contactName: r.contact_name,     // Map back
+                        isFavorite: r.is_favorite        // Map back
+                    }));
+                    setRetailers(mappedRetailers);
+                }
                 if (oData.data && oData.data.length > 0) setOrders(oData.data);
                 if (eData.data && eData.data.length > 0) setEvents(eData.data);
 
@@ -84,10 +93,39 @@ export const DataProvider = ({ children }) => {
     // --- Actions ---
 
     // Retailers (Supabase - Text ID)
+    // Retailers (Supabase - Text ID)
     const addRetailer = async (retailer) => {
-        const newRetailer = { ...retailer, id: `r${Date.now()}` };
-        const { error } = await supabase.from('retailers').insert([newRetailer]);
-        if (error) console.error("Error adding retailer:", error);
+        const id = `r${Date.now()}`;
+
+        // MAP Frontend (camelCase) -> DB (snake_case)
+        const dbRetailer = {
+            id,
+            name: retailer.name,
+            location: retailer.location,
+            address: retailer.address,
+            city: retailer.city,
+            state: retailer.state,
+            zip: retailer.zip,
+            warehouse_code: retailer.warehouseCode, // Map
+            contact_name: retailer.contactName,     // Map
+            email: retailer.email,
+            phone: retailer.phone,
+            cell: retailer.cell,
+            notes: retailer.notes,
+            accounts: retailer.accounts,
+            is_favorite: retailer.isFavorite || false, // Map
+            created_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('retailers').insert([dbRetailer]);
+
+        if (error) {
+            console.error("Error adding retailer:", error);
+            throw error; // Propagate error to UI
+        }
+
+        // Optimistic Update (using camelCase for frontend)
+        setRetailers(prev => [...prev, { ...retailer, id, isFavorite: false }]);
     };
 
     const updateRetailer = async (id, updates) => {
