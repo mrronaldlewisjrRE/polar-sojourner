@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import DataImportStaging from './pages/DataImportStaging';
 import Gallery from './pages/Gallery';
 import AdminDashboard from './pages/AdminDashboard';
+import RetailerDiscovery from './pages/RetailerDiscovery';
 import Debug from './pages/Debug';
 // import Analytics from './pages/Analytics'; // Component missing
 
@@ -37,6 +38,7 @@ function App() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="vendors" element={<VendorManagement />} />
             <Route path="retailers" element={<RetailerManagement />} />
+            <Route path="discovery" element={<RetailerDiscovery />} />
             <Route path="products" element={<ProductManagement />} />
             <Route path="sku-tracker" element={<SKUTrackerDashboard />} />
             <Route path="orders" element={<OrderHistory />} />

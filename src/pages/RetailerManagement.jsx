@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
 import RetailerSearchModal from '../components/RetailerSearchModal';
 import { useToast } from '../contexts/ToastContext';
 
 export default function RetailerManagement() {
+    const navigate = useNavigate();
     const { retailers, addRetailer, updateRetailer, deleteRetailer, toggleRetailerFavorite } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function RetailerManagement() {
                 </div>
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setIsSearchModalOpen(true)}
+                        onClick={() => navigate('/discovery')}
                         className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 shadow-sm transition-colors"
                     >
                         <Globe size={18} /> Discover New
