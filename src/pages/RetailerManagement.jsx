@@ -301,7 +301,8 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div
                 onClick={e => e.stopPropagation()}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 transition-colors"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[75vh] my-8 animate-in fade-in zoom-in-95 duration-200 transition-colors"
+                style={{ maxHeight: '75vh' }}
             >
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
@@ -351,8 +352,8 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Distributor Accounts (JSON)</label>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter account numbers for each distributor (e.g., "orgill": "123").</p>
                         <textarea
-                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 font-mono text-sm bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-cdh-red outline-none"
-                            rows="5"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 font-mono text-xs bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-cdh-red outline-none"
+                            rows="3"
                             value={formData.accounts}
                             onChange={e => setFormData({ ...formData, accounts: e.target.value })}
                         />
