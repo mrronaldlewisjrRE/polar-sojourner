@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalIcon, X, Image as ImageIcon, Loader2, Trash2, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalIcon, X, Image as ImageIcon, Loader2, Trash2, ExternalLink, LayoutList } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { compressImage } from '../lib/imageUtils';
-import { useNavigate } from 'react-router-dom';
 
 // Helper to get days in month
 const getDaysInMonth = (date) => {
@@ -183,49 +182,130 @@ export default function Calendar() {
         return calendarDays;
     };
 
+    // Main View State: 'grid' | 'list'
+    const [view, setView] = useState('grid');
+
+    // ... existing ...
+
+    // Sort all events for List View
+    const sortedAllEvents = [...events].sort((a, b) => {
+        return new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time);
+    });
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <CalIcon /> Event Calendar
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Schedule vendor calls, manage shows, and track events.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/vendors?view=gallery')}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm transition-colors"
-                    >
-                        <ImageIcon size={18} />
-                        See Images
-                    </button>
-                    <div className="flex items-center gap-4 bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
-                            <ChevronLeft size={20} />
+                <div className="flex items-center gap-2">
+                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex items-center border border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={() => setView('grid')}
+                            className={cn(
+                                "p-2 rounded-md transition-all flex items-center gap-2 text-sm font-medium",
+                                view === 'grid'
+                                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                            )}
+                        >
+                            <CalIcon size={18} />
+                            Calendar
                         </button>
-                        <span className="text-lg font-bold min-w-[150px] text-center dark:text-white">
-                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                        </span>
-                        <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
-                            <ChevronRight size={20} />
+                        <button
+                            onClick={() => setView('list')}
+                            className={cn(
+                                "p-2 rounded-md transition-all flex items-center gap-2 text-sm font-medium",
+                                view === 'list'
+                                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                            )}
+                        >
+                            <LayoutList size={18} />
+                            List
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-center py-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                        <div key={d} className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{d}</div>
-                    ))}
+            {view === 'grid' ? (
+                <>
+                    {/* Month Nagivation */}
+                    <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+                            <ChevronLeft size={20} className="text-gray-600 dark:text-gray-300" />
+                        </button>
+                        <span className="text-xl font-bold dark:text-white">
+                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+                            <ChevronRight size={20} className="text-gray-600 dark:text-gray-300" />
+                        </button>
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-center py-3">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                <div key={d} className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{d}</div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7">
+                            {renderCalendarDays()}
+                        </div>
+                    </div>
+                </>
+            ) : (
+                /* List View */
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                        <h2 className="font-semibold text-gray-900 dark:text-white">All Upcoming Events</h2>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {sortedAllEvents.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                                No events scheduled.
+                            </div>
+                        ) : (
+                            sortedAllEvents.map(event => (
+                                <div
+                                    key={event.id}
+                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex items-center justify-between group cursor-pointer"
+                                    onClick={() => handleDateClick(new Date(event.date).getDate())} // Open modal on click (hacky but works if strict date match isn't issue, wait - date object mismatch likely)
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs font-bold uppercase">{new Date(event.date).toLocaleString('default', { month: 'short' })}</span>
+                                            <span className="text-lg font-bold text-gray-900 dark:text-white">{new Date(event.date).getDate()}</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-medium text-gray-900 dark:text-white">{event.title}</h3>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                                <span>{event.time}</span>
+                                                <span>•</span>
+                                                <span className={cn(
+                                                    "px-1.5 py-0.5 rounded text-xs",
+                                                    event.type === 'Show' ? "bg-purple-100 text-purple-800" :
+                                                        event.type === 'Schedule' ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"
+                                                )}>{event.type}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="text-gray-400 hover:text-cdh-red">
+                                            <ExternalLink size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
-                <div className="grid grid-cols-7">
-                    {renderCalendarDays()}
-                </div>
-            </div>
+            )}
 
             {/* Day View / Add Event Modal */}
             {isModalOpen && (

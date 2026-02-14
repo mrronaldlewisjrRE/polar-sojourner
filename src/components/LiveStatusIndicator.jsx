@@ -6,7 +6,7 @@ const getStoredStatus = (sku) => {
     try {
         const item = localStorage.getItem(`sku_status_${sku}`);
         return item ? JSON.parse(item) : null;
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -20,7 +20,7 @@ const setStoredStatus = (sku, status) => {
         };
         localStorage.setItem(`sku_status_${sku}`, JSON.stringify(data));
         return data;
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -50,10 +50,14 @@ export default function LiveStatusIndicator({ sku, storeName = 'Vendor Site' }) 
         const handleSync = () => {
             if (sku) setStatusData(getStoredStatus(sku));
         };
-        // Listen for internal "checking" events from the auto-verifier
+        // Listen for internal "checking" events from the auto-verified
         const handleInternal = (e) => {
             if (e.detail?.sku === sku && e.detail?.status === 'checking') {
-                setStatusData({ status: 'checking', timestamp: null });
+                // Keep the previous timestamp if available, so it doesn't disappear
+                setStatusData(prev => ({
+                    status: 'checking',
+                    timestamp: prev?.timestamp || null
+                }));
             }
         };
 
@@ -93,9 +97,10 @@ export default function LiveStatusIndicator({ sku, storeName = 'Vendor Site' }) 
                 <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-max max-w-[200px] bg-gray-900 text-white text-xs rounded py-1 px-2 pointer-events-none shadow-lg animate-in fade-in zoom-in-95 duration-100">
                     <p className="font-semibold capitalize mb-0.5">Status: {status}</p>
                     {statusData?.timestamp ? (
-                        <p className="opacity-75 text-[10px]">
-                            Checked: {new Date(statusData.timestamp).toLocaleDateString()}
-                        </p>
+                        <div className="opacity-75 text-[10px]">
+                            <p>Checked: {new Date(statusData.timestamp).toLocaleDateString()}</p>
+                            <p>{new Date(statusData.timestamp).toLocaleTimeString()}</p>
+                        </div>
                     ) : (
                         <p className="opacity-75 text-[10px]">Click to verify</p>
                     )}

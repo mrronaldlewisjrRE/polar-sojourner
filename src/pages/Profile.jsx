@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../lib/supabase';
-import { User, Camera, Save, Loader2, AlertCircle, CheckCircle, Lock, Eye, EyeOff, Phone, Activity } from 'lucide-react';
+import { User, Camera, Save, Loader2, AlertCircle, CheckCircle, Lock, Eye, EyeOff, Phone, Activity, Volume2, Shield, Users, Zap, BarChart } from 'lucide-react';
 
 export default function Profile() {
     const { user } = useAuth();
@@ -14,6 +15,12 @@ export default function Profile() {
     const [bio, setBio] = useState('');
     const [contactInfo, setContactInfo] = useState('');
     const [isOnline, setIsOnline] = useState(true);
+    const [role, setRole] = useState('viewer');
+
+    // Admin Fields
+    const [users, setUsers] = useState([]);
+    const [adminOverrides, setAdminOverrides] = useState(false);
+    const [adminInsights, setAdminInsights] = useState(false);
 
     // Password Fields
     const [newPassword, setNewPassword] = useState('');
@@ -43,6 +50,24 @@ export default function Profile() {
                 setBio(data.bio || '');
                 setContactInfo(data.contact_info || '');
                 setIsOnline(data.is_online ?? true);
+                setRole(data.role || 'viewer');
+
+                // Bootstrap Admin: Check role OR specific email
+                const isBootstrapAdmin = (user.email === 'ronald@cdhassociates.com');
+                const finalRole = isBootstrapAdmin ? 'admin' : (data.role || 'viewer');
+
+                setRole(finalRole);
+
+                // If admin (or bootstrap), fetch all users
+                if (finalRole === 'admin') {
+                    const { data: allUsers, error: usersError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .order('full_name', { ascending: true });
+
+                    if (usersError) console.error('Error fetching users:', usersError);
+                    else setUsers(allUsers || []);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -57,6 +82,26 @@ export default function Profile() {
             getProfile();
         }
     }, [user, getProfile]);
+
+    async function toggleAdminRole(targetUserId, currentRole) {
+        try {
+            const newRole = currentRole === 'admin' ? 'viewer' : 'admin';
+            const { error } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', targetUserId);
+
+            if (error) throw error;
+
+            // Update local state
+            setUsers(users.map(u => u.id === targetUserId ? { ...u, role: newRole } : u));
+            setMessage(`User role updated to ${newRole}`);
+            setTimeout(() => setMessage(null), 3000);
+        } catch (err) {
+            console.error('Error updating role:', err);
+            setError('Failed to update user role');
+        }
+    }
 
     async function updateProfile(e) {
         e.preventDefault();
@@ -112,6 +157,28 @@ export default function Profile() {
             </h1>
 
             <form onSubmit={updateProfile} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6 animate-in fade-in duration-500">
+
+                {/* Admin Banner */}
+                {role === 'admin' && (
+                    <div className="bg-gradient-to-r from-cdh-red/10 to-red-50 dark:from-red-900/30 dark:to-red-900/10 border border-red-100 dark:border-red-800 rounded-lg p-4 mb-6 flex items-center gap-4">
+                        <div className="p-2 bg-cdh-red text-white rounded-full shadow-sm">
+                            <Shield size={20} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 dark:text-white">Admin Access Granted</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                                You have administrative privileges. Admin settings are available at the bottom of this page.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Role Badge */}
+                {role === 'admin' && (
+                    <div className="flex items-center gap-2 text-cdh-red font-semibold bg-red-50 dark:bg-red-900/20 p-2 rounded-lg w-fit">
+                        <Shield size={16} /> Admin Account
+                    </div>
+                )}
 
                 {/* Avatar Section */}
                 <div className="flex items-center gap-6">
@@ -174,26 +241,31 @@ export default function Profile() {
                 </div>
 
                 {/* Tool Status Indicator Toggle */}
+                {/* Tool Status Indicator Toggle */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${isOnline ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
                             <Activity size={20} />
                         </div>
-                        <div>
+                        <div className="flex flex-col">
                             <p className="font-medium text-gray-900 dark:text-white">Live Status Indicator</p>
                             <p className="text-xs text-gray-500">Show when I am active in the tool</p>
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setIsOnline(!isOnline)}
-                        className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cdh-red ${isOnline ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                    >
-                        <span
-                            className={`inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform duration-200 ease-in-out mt-1 ml-1 ${isOnline ? 'translate-x-6' : 'translate-x-0'}`}
-                        />
-                    </button>
+                    <Switch
+                        checked={isOnline}
+                        onChange={setIsOnline}
+                        color="bg-green-500"
+                        label=""
+                    />
+                </div>
+
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <Volume2 size={18} /> Notification Sounds
+                    </h3>
+                    <SoundSettings />
                 </div>
 
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -256,13 +328,145 @@ export default function Profile() {
                     <button
                         type="submit"
                         disabled={saving}
-                        className="w-full md:w-auto px-6 py-2.5 bg-cdh-red hover:bg-cdh-dark text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-cdh-red to-red-600 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                         Save Changes
                     </button>
                 </div>
             </form>
+
+            {/* Admin Settings Section */}
+            {role === 'admin' && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6 animate-in fade-in duration-700">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Shield className="text-cdh-red" size={24} />
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Admin Settings</h2>
+                    </div>
+
+                    {/* Admin Privileges */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-full bg-blue-100 text-blue-600">
+                                    <Zap size={20} />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900 dark:text-white">System Overrides</p>
+                                    <p className="text-xs text-gray-500">Bypass standard validation rules.</p>
+                                </div>
+                            </div>
+                            <Switch checked={adminOverrides} onChange={setAdminOverrides} />
+                        </div>
+
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-full bg-purple-100 text-purple-600">
+                                    <BarChart size={20} />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900 dark:text-white">Advanced Insights</p>
+                                    <p className="text-xs text-gray-500">View detailed analytics data.</p>
+                                </div>
+                            </div>
+                            <Switch checked={adminInsights} onChange={setAdminInsights} />
+                        </div>
+                    </div>
+
+                    {/* Team Management */}
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                            <Users size={18} /> Team Management
+                        </h3>
+
+                        <div className="space-y-3">
+                            {users.map((u) => (
+                                <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
+                                            {u.avatar_url ? (
+                                                <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-sm font-bold text-gray-500">{u.full_name?.[0] || u.email?.[0] || '?'}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900 dark:text-white">{u.full_name || 'Unnamed User'}</p>
+                                            <p className="text-xs text-gray-500">{u.email || 'No email'}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Allow self-editing for bootstrap */}
+                                    {(true) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleAdminRole(u.id, u.role)}
+                                            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${u.role === 'admin'
+                                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200'
+                                                }`}
+                                        >
+                                            {u.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                                        </button>
+                                    )}
+                                    {u.id === user.id && (
+                                        <span className="px-3 py-1.5 text-xs font-semibold bg-gray-100 text-gray-400 rounded-full cursor-default">
+                                            You
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                            {users.length === 0 && <p className="text-sm text-gray-500 italic">No other users found.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+
+const Switch = ({ checked, onChange, label, description, color = 'bg-cdh-red' }) => (
+    <div className="flex items-center justify-between py-3">
+        <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
+            {description && <span className="text-xs text-gray-500 dark:text-gray-400">{description}</span>}
+        </div>
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cdh-red focus:ring-offset-2 ${checked ? color : 'bg-gray-200 dark:bg-gray-700'}`}
+        >
+            <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+            />
+        </button>
+    </div>
+);
+
+function SoundSettings() {
+    const { settings, toggleSetting } = useSettings();
+
+    return (
+        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 space-y-1">
+            <Switch
+                label="Team Message Sounds"
+                checked={settings.teamChatSound}
+                onChange={() => toggleSetting('teamChatSound')}
+            />
+            <Switch
+                label="Private Message Sounds"
+                checked={settings.privateChatSound}
+                onChange={() => toggleSetting('privateChatSound')}
+            />
+            <Switch
+                label="System Notifications"
+                description="Toast popups and alerts"
+                checked={settings.systemSound}
+                onChange={() => toggleSetting('systemSound')}
+            />
         </div>
     );
 }

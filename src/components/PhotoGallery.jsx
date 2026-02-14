@@ -81,11 +81,13 @@ export default function PhotoGallery() {
         });
 
         // Execute updates
-        Object.entries(eventsToUpdate).forEach(([eventId, imageIds]) => {
-            const event = events.find(e => e.id === eventId);
+        Object.entries(eventsToUpdate).forEach(([eventIdStr, imageIds]) => {
+            // Convert to string for comparison to handle both number/string IDs
+            const event = events.find(e => String(e.id) === eventIdStr);
             if (event) {
                 const updatedImages = (event.images || []).filter(img => !imageIds.has(img.id));
-                updateEvent(eventId, { images: updatedImages });
+                // Use original event.id to preserve type (BigInt/number) for DB update
+                updateEvent(event.id, { images: updatedImages });
             }
         });
 
@@ -174,7 +176,7 @@ export default function PhotoGallery() {
                             onChange={(e) => setSortBy(e.target.value)}
                         >
                             <option value="Date">Date (Newest)</option>
-                            <option value="Title">Title (A-Z)</option>
+                            <option value="Title">Vendor / Title (A-Z)</option>
                         </select>
                     </div>
                 </div>
@@ -273,7 +275,18 @@ export default function PhotoGallery() {
                     className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setSelectedPhoto(null)}
                 >
-                    <div className="max-w-5xl w-full max-h-[90vh] flex flex-col gap-4">
+                    <div className="max-w-5xl w-full max-h-[90vh] flex flex-col gap-4 relative">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePhoto(e, selectedPhoto);
+                                setSelectedPhoto(null);
+                            }}
+                            className="absolute top-4 right-4 z-50 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
+                            title="Delete Photo"
+                        >
+                            <Trash2 size={20} />
+                        </button>
                         <img
                             src={selectedPhoto.url}
                             alt={selectedPhoto.title}

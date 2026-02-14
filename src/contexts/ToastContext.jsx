@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { useSettings } from './SettingsContext';
+import { playSound } from '../lib/soundUtils';
 
 const ToastContext = createContext();
 
@@ -13,6 +15,13 @@ export const useToast = () => {
 
 export const ToastProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
+    const { settings } = useSettings();
+    // Use ref for settings to avoid re-creating addToast on every setting change
+    const settingsRef = useRef(settings);
+
+    useEffect(() => {
+        settingsRef.current = settings;
+    }, [settings]);
 
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -21,6 +30,11 @@ export const ToastProvider = ({ children }) => {
     const addToast = useCallback((message, type = 'info', duration = 3000) => {
         const id = Math.random().toString(36).substr(2, 9);
         setToasts((prev) => [...prev, { id, message, type, duration }]);
+
+        // Play sound if enabled
+        if (settingsRef.current?.systemSound) {
+            playSound('ding');
+        }
 
         if (duration > 0) {
             setTimeout(() => {

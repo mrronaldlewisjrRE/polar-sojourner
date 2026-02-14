@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { playSound } from '../lib/soundUtils';
 import { supabase } from '../lib/supabase';
 import { Send, X, MessageCircle, User, Users, Circle, Image, Paperclip, Loader2, Trash2 } from 'lucide-react';
 
@@ -9,7 +11,17 @@ export default function ChatInterface({ isOpen, onClose }) {
     const [newMessage, setNewMessage] = useState('');
     const [activeChannel, setActiveChannel] = useState(null); // null = Public, UUID = DM
     const [profiles, setProfiles] = useState({});
+    const { settings } = useSettings();
+    const settingsRef = useRef(settings);
+
+    useEffect(() => {
+        settingsRef.current = settings;
+    }, [settings]);
+
     const [onlineUsers, setOnlineUsers] = useState({});
+
+    // View Mode: 'normal' | 'minimized' | 'expanded'
+    const [viewMode, setViewMode] = useState('normal');
 
     // File Upload State
     const [attachment, setAttachment] = useState(null);
@@ -62,7 +74,27 @@ export default function ChatInterface({ isOpen, onClose }) {
             .channel('public:messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
                 const newMsg = payload.new;
-                setMessages(prev => [...prev, newMsg]);
+                setMessages(prev => {
+                    // Prevent duplicates if we already added it manually
+                    if (prev.some(m => m.id === newMsg.id)) return prev;
+
+                    // Play Sound if not from me
+                    if (newMsg.sender_id !== user.id) {
+                        // If newMsg.recipient_id is NULL -> Team Chat
+                        // If newMsg.recipient_id is NOT NULL -> Private Chat
+
+                        // We need to access settings here. Since this is a callback, we need to ensure 'settings' is available or use a ref.
+                        // However, 'settings' from useSettings might not be fresh in this closure if not in dependency array.
+                        // But we can't easily put settings in dependency array of useEffect without re-subscribing.
+                        // ALTERNATIVE: Just dispatch event or use a ref for settings.
+
+                        // Let's use a Mutable Ref for settings to avoid re-subscription loop
+                        if (newMsg.recipient_id && settingsRef.current.privateChatSound) playSound();
+                        else if (!newMsg.recipient_id && settingsRef.current.teamChatSound) playSound();
+                    }
+
+                    return [...prev, newMsg];
+                });
             })
             .subscribe();
 
@@ -125,15 +157,26 @@ export default function ChatInterface({ isOpen, onClose }) {
                 attachmentType = attachment.type.startsWith('image/') ? 'image' : 'file';
             }
 
-            const { error } = await supabase.from('messages').insert({
+            // OPTIMISTIC/IMMEDIATE UI UPDATE
+            // We use .select() to get the real DB row immediately
+            const { data, error } = await supabase.from('messages').insert({
                 content: newMessage,
                 sender_id: user.id,
                 recipient_id: activeChannel, // null or uuid
                 attachment_url: attachmentUrl,
                 attachment_type: attachmentType
-            });
+            }).select().single();
 
-            if (!error) {
+            if (error) throw error;
+
+            if (data) {
+                // Manually add to state immediately
+                setMessages(prev => {
+                    // Safety check, though unlikely to race this fast
+                    if (prev.some(m => m.id === data.id)) return prev;
+                    return [...prev, data];
+                });
+
                 setNewMessage('');
                 setAttachment(null);
                 if (fileInputRef.current) fileInputRef.current.value = '';
@@ -158,184 +201,234 @@ export default function ChatInterface({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
+    // determine width state
+    const widthClass = viewMode === 'minimized' ? 'w-72 h-auto rounded-t-lg' : viewMode === 'expanded' ? 'w-full md:w-[600px]' : 'w-full md:w-96';
+    const positionClass = viewMode === 'minimized' ? 'bottom-0 right-4 top-auto border border-gray-300' : 'inset-y-0 right-0 border-l';
+
     return (
-        <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300">
+        <div className={`fixed ${positionClass} ${widthClass} bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col border-gray-200 dark:border-gray-700 transform transition-all duration-300`}>
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+            <div
+                className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 cursor-pointer"
+                onClick={() => viewMode === 'minimized' && setViewMode('normal')}
+            >
                 <div className="flex items-center gap-2">
                     <MessageCircle className="text-cdh-red" size={20} />
-                    <h2 className="font-bold text-gray-800 dark:text-white">Team Chat</h2>
+                    <h2 className="font-bold text-gray-800 dark:text-white text-sm">Team Chat</h2>
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full">
-                    <X size={20} />
-                </button>
+                <div className="flex items-center gap-1">
+                    {/* Minimize Button */}
+                    {viewMode !== 'minimized' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setViewMode('minimized'); }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
+                            title="Minimize"
+                        >
+                            <span className="mb-2 block w-3 h-0.5 bg-current"></span> {/* Dash Icon */}
+                        </button>
+                    )}
+
+                    {/* Expand/Restore Button */}
+                    {viewMode !== 'minimized' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setViewMode(viewMode === 'expanded' ? 'normal' : 'expanded'); }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
+                            title={viewMode === 'expanded' ? "Restore Size" : "Expand"}
+                        >
+                            <div className="w-3 h-3 border-2 border-current rounded-sm"></div> {/* Box Icon */}
+                        </button>
+                    )}
+
+                    {/* Restore Button for Minimized mode */}
+                    {viewMode === 'minimized' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setViewMode('normal'); }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
+                            title="Expand"
+                        >
+                            <div className="w-3 h-3 border-2 border-current rounded-sm"></div>
+                        </button>
+                    )}
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="p-1 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 rounded"
+                        title="Close Chat"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar (Channel List - Mini) */}
-                <div className="w-16 bg-gray-100 dark:bg-gray-900 flex flex-col items-center py-4 gap-4 border-r border-gray-200 dark:border-gray-800">
-                    <button
-                        onClick={() => { setActiveChannel(null); fetchMessages(null); }}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${!activeChannel ? 'bg-cdh-red text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-500 hover:scale-105'}`}
-                        title="Public Team Chat"
-                    >
-                        <Users size={20} />
-                    </button>
-
-                    <div className="w-8 h-px bg-gray-300 dark:bg-gray-700"></div>
-
-                    {Object.values(profiles).filter(p => p.id !== user.id).map(profile => (
+            {viewMode !== 'minimized' && (
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Sidebar (Channel List - Mini) */}
+                    <div className="w-16 bg-gray-100 dark:bg-gray-900 flex flex-col items-center py-4 gap-4 border-r border-gray-200 dark:border-gray-800">
                         <button
-                            key={profile.id}
-                            onClick={() => { setActiveChannel(profile.id); fetchMessages(profile.id); }}
-                            className={`relative w-10 h-10 rounded-full overflow-hidden transition-all border-2 ${activeChannel === profile.id ? 'border-cdh-red scale-110' : 'border-transparent hover:border-gray-300'}`}
-                            title={profile.full_name || 'User'}
+                            onClick={() => { setActiveChannel(null); fetchMessages(null); }}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${!activeChannel ? 'bg-cdh-red text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-500 hover:scale-105'}`}
+                            title="Public Team Chat"
                         >
-                            {profile.avatar_url ? (
-                                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600">
-                                    {profile.full_name?.[0] || 'U'}
-                                </div>
-                            )}
-                            {/* Online Dot */}
-                            {onlineUsers[profile.id] && (
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
-                            )}
+                            <Users size={20} />
                         </button>
-                    ))}
-                </div>
 
-                {/* Messages Area */}
-                <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
-                    <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium flex items-center gap-2">
-                        {activeChannel ? (
-                            <>
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                {profiles[activeChannel]?.full_name || 'Unknown'}
-                            </>
-                        ) : (
-                            <>
-                                <Users size={16} /> Public Team Channel
-                            </>
-                        )}
-                    </div>
+                        <div className="w-8 h-px bg-gray-300 dark:bg-gray-700"></div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {loading && <div className="text-center text-gray-400 text-sm">Loading messages...</div>}
-
-                        {!loading && displayMessages.length === 0 && (
-                            <div className="text-center text-gray-400 text-sm mt-10">
-                                No messages yet. Say hello! 👋
-                            </div>
-                        )}
-
-                        {displayMessages.map((msg, i) => {
-                            const isMe = msg.sender_id === user.id;
-                            const showAvatar = !isMe && (i === 0 || displayMessages[i - 1]?.sender_id !== msg.sender_id);
-
-                            return (
-                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
-                                    {!isMe && (
-                                        <div className="w-8 mr-2 flex-shrink-0">
-                                            {showAvatar ? (
-                                                <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                                                    {profiles[msg.sender_id]?.avatar_url ? (
-                                                        <img src={profiles[msg.sender_id].avatar_url} className="w-full h-full" alt="avatar" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">
-                                                            {profiles[msg.sender_id]?.full_name?.[0] || 'U'}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : <div className="w-8 h-8" />}
+                        {Object.values(profiles)
+                            .filter(p => p.id !== user.id && !['ronald_lewis_jr@live.com', 'ronald+test@cdhassociates.com'].includes(p.email))
+                            .map(profile => (
+                                <button
+                                    key={profile.id}
+                                    onClick={() => { setActiveChannel(profile.id); fetchMessages(profile.id); }}
+                                    className={`relative w-10 h-10 rounded-full overflow-hidden transition-all border-2 ${activeChannel === profile.id ? 'border-cdh-red scale-110' : 'border-transparent hover:border-gray-300'}`}
+                                    title={profile.full_name || 'User'}
+                                >
+                                    {profile.avatar_url ? (
+                                        <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600">
+                                            {profile.full_name?.[0] || 'U'}
                                         </div>
                                     )}
-                                    <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${isMe
-                                        ? 'bg-cdh-red text-white rounded-br-none'
-                                        : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm rounded-bl-none'
-                                        }`}>
-
-                                        {/* Attachment Rendering */}
-                                        {msg.attachment_url && msg.attachment_type === 'image' && (
-                                            <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
-                                                <img src={msg.attachment_url} alt="Shared" className="max-w-full h-auto max-h-48 object-cover" />
-                                            </div>
-                                        )}
-                                        {msg.attachment_url && msg.attachment_type !== 'image' && (
-                                            <div className="mb-2">
-                                                <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 underline opacity-90 hover:opacity-100">
-                                                    <Paperclip size={14} /> View Attachment
-                                                </a>
-                                            </div>
-                                        )}
-
-                                        <p>{msg.content}</p>
-                                        <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-red-100' : 'text-gray-400'}`}>
-                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        <div ref={messagesEndRef} />
+                                    {/* Online Dot */}
+                                    {onlineUsers[profile.id] && (
+                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
+                                    )}
+                                </button>
+                            ))}
                     </div>
 
-                    {/* Input */}
-                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                        {/* File Preview */}
-                        {attachment && (
-                            <div className="flex items-center gap-2 mb-2 p-2 bg-gray-100 dark:bg-gray-900 rounded-lg max-w-max">
-                                {attachment.type.startsWith('image/') ? (
-                                    <Image size={16} className="text-gray-500" />
-                                ) : (
-                                    <Paperclip size={16} className="text-gray-500" />
-                                )}
-                                <span className="text-xs truncate max-w-[150px] dark:text-gray-300">{attachment.name}</span>
-                                <button type="button" onClick={() => setAttachment(null)} className="text-red-500 hover:text-red-700">
-                                    <X size={14} />
+                    {/* Messages Area */}
+                    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
+                        <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium flex items-center gap-2">
+                            {activeChannel ? (
+                                <>
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                    {profiles[activeChannel]?.full_name || 'Unknown'}
+                                </>
+                            ) : (
+                                <>
+                                    <Users size={16} /> Public Team Channel
+                                </>
+                            )}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {loading && <div className="text-center text-gray-400 text-sm">Loading messages...</div>}
+
+                            {!loading && displayMessages.length === 0 && (
+                                <div className="text-center text-gray-400 text-sm mt-10">
+                                    No messages yet. Say hello! 👋
+                                </div>
+                            )}
+
+                            {displayMessages.map((msg, i) => {
+                                const isMe = msg.sender_id === user.id;
+                                const showAvatar = !isMe && (i === 0 || displayMessages[i - 1]?.sender_id !== msg.sender_id);
+
+                                return (
+                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
+                                        {!isMe && (
+                                            <div className="w-8 mr-2 flex-shrink-0">
+                                                {showAvatar ? (
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                                                        {profiles[msg.sender_id]?.avatar_url ? (
+                                                            <img src={profiles[msg.sender_id].avatar_url} className="w-full h-full" alt="avatar" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-600">
+                                                                {profiles[msg.sender_id]?.full_name?.[0] || 'U'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : <div className="w-8 h-8" />}
+                                            </div>
+                                        )}
+                                        <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${isMe
+                                            ? 'bg-cdh-red text-white rounded-br-none'
+                                            : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm rounded-bl-none'
+                                            }`}>
+
+                                            {/* Attachment Rendering */}
+                                            {msg.attachment_url && msg.attachment_type === 'image' && (
+                                                <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
+                                                    <img src={msg.attachment_url} alt="Shared" className="max-w-full h-auto max-h-48 object-cover" />
+                                                </div>
+                                            )}
+                                            {msg.attachment_url && msg.attachment_type !== 'image' && (
+                                                <div className="mb-2">
+                                                    <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 underline opacity-90 hover:opacity-100">
+                                                        <Paperclip size={14} /> View Attachment
+                                                    </a>
+                                                </div>
+                                            )}
+
+                                            <p>{msg.content}</p>
+                                            <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-red-100' : 'text-gray-400'}`}>
+                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input */}
+                        <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                            {/* File Preview */}
+                            {attachment && (
+                                <div className="flex items-center gap-2 mb-2 p-2 bg-gray-100 dark:bg-gray-900 rounded-lg max-w-max">
+                                    {attachment.type.startsWith('image/') ? (
+                                        <Image size={16} className="text-gray-500" />
+                                    ) : (
+                                        <Paperclip size={16} className="text-gray-500" />
+                                    )}
+                                    <span className="text-xs truncate max-w-[150px] dark:text-gray-300">{attachment.name}</span>
+                                    <button type="button" onClick={() => setAttachment(null)} className="text-red-500 hover:text-red-700">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2">
+                                {/* Hidden File Input */}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                                    title="Attach File"
+                                >
+                                    <Paperclip size={20} />
+                                </button>
+
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    placeholder={uploading ? "Uploading..." : "Type a message..."}
+                                    disabled={uploading}
+                                    className="flex-1 bg-gray-100 dark:bg-gray-900 border-0 rounded-full px-4 text-sm focus:ring-2 focus:ring-cdh-red outline-none disabled:opacity-50"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={(!newMessage.trim() && !attachment) || uploading}
+                                    className="p-2 bg-cdh-red hover:bg-cdh-dark text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 flex items-center justify-center"
+                                >
+                                    {uploading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                                 </button>
                             </div>
-                        )}
-
-                        <div className="flex gap-2">
-                            {/* Hidden File Input */}
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelect}
-                                className="hidden"
-                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                            />
-
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                                title="Attach File"
-                            >
-                                <Paperclip size={20} />
-                            </button>
-
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder={uploading ? "Uploading..." : "Type a message..."}
-                                disabled={uploading}
-                                className="flex-1 bg-gray-100 dark:bg-gray-900 border-0 rounded-full px-4 text-sm focus:ring-2 focus:ring-cdh-red outline-none disabled:opacity-50"
-                            />
-                            <button
-                                type="submit"
-                                disabled={(!newMessage.trim() && !attachment) || uploading}
-                                className="p-2 bg-cdh-red hover:bg-cdh-dark text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 flex items-center justify-center"
-                            >
-                                {uploading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

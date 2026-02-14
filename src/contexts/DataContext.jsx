@@ -10,8 +10,8 @@ export const useData = () => useContext(DataContext);
 import { supabase } from '../lib/supabase';
 
 export const DataProvider = ({ children }) => {
-    const [products, setProducts] = useState({});
-    const [vendors, setVendors] = useState([]);
+    const [products, setProducts] = useState(INITIAL_PRODUCTS);
+    const [vendors, setVendors] = useState(INITIAL_VENDORS);
     const [retailers, setRetailers] = useState(INITIAL_RETAILERS);
     const [distributors, setDistributors] = useState(INITIAL_DISTRIBUTORS);
     const [orders, setOrders] = useState([]);
@@ -31,13 +31,14 @@ export const DataProvider = ({ children }) => {
                     supabase.from('events').select('*')
                 ]);
 
-                if (vData.data) setVendors(vData.data);
-                if (rData.data) setRetailers(rData.data);
-                if (oData.data) setOrders(oData.data);
-                if (eData.data) setEvents(eData.data);
+                // Only override mock data if DB has actual data
+                if (vData.data && vData.data.length > 0) setVendors(vData.data);
+                if (rData.data && rData.data.length > 0) setRetailers(rData.data);
+                if (oData.data && oData.data.length > 0) setOrders(oData.data);
+                if (eData.data && eData.data.length > 0) setEvents(eData.data);
 
                 // Transform Products: Flat DB list -> { vendorId: [products] }
-                if (pData.data) {
+                if (pData.data && pData.data.length > 0) {
                     const productMap = {};
                     pData.data.forEach(p => {
                         if (!productMap[p.vendor_id]) productMap[p.vendor_id] = [];

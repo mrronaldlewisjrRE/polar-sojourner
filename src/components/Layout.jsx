@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     LayoutDashboard,
@@ -17,7 +17,9 @@ import {
     CalendarDays,
     LogOut,
     MessageCircle,
-    Server
+    Image as ImageIcon,
+    Server,
+    Shield
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate, Link, NavLink, Outlet } from 'react-router-dom';
@@ -31,7 +33,7 @@ export default function Layout() {
     });
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const mainRef = useRef(null);
+
 
     const handleLogout = async () => {
         try {
@@ -53,24 +55,24 @@ export default function Layout() {
         }
     }, [darkMode]);
 
-    // Scroll Handlers
+    // Scroll Handlers (Window)
     const scrollToTop = () => {
-        mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const scrollToBottom = () => {
-        mainRef.current?.scrollTo({ top: mainRef.current.scrollHeight, behavior: 'smooth' });
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
             {/* Skip Link */}
             <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-cdh-red border border-cdh-red rounded-br-lg transition-all">
                 Skip to Content
             </a>
 
-            {/* Sidebar (Desktop) */}
-            <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col transition-colors duration-200">
+            {/* Sidebar (Desktop) - Fixed Position */}
+            <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col transition-colors duration-200">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <Link to="/" className="block">
                         <h1 className="text-2xl font-bold text-cdh-red dark:text-red-400 tracking-tight cursor-pointer hover:opacity-80 transition-opacity">
@@ -80,8 +82,8 @@ export default function Layout() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">Internal Ops Portal</p>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
-                    <NavContent onChatClick={() => setIsChatOpen(true)} />
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                    <NavContent user={user} onChatClick={() => setIsChatOpen(true)} />
                 </nav>
 
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
@@ -128,7 +130,7 @@ export default function Layout() {
                             </button>
                         </div>
                         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                            <NavContent onChatClick={() => { setIsChatOpen(true); setIsMobileMenuOpen(false); }} onClick={() => setIsMobileMenuOpen(false)} />
+                            <NavContent user={user} onChatClick={() => { setIsChatOpen(true); setIsMobileMenuOpen(false); }} onClick={() => setIsMobileMenuOpen(false)} />
                         </nav>
 
                         {/* Mobile Footer (Profile & Logout) */}
@@ -170,36 +172,21 @@ export default function Layout() {
                 </div>
             )}
 
-            {/* Main Content */}
-            <div id="main-content" className="flex-1 flex flex-col overflow-hidden relative">
-                {/* ... header and main ... */}
-                {/* Mobile Header */}
-                <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between md:hidden">
-                    <Link to="/" className="font-bold text-cdh-red dark:text-red-400">CDH Associates</Link>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setIsChatOpen(true)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
-                        >
-                            <MessageCircle size={20} />
-                        </button>
-                        <button
-                            onClick={() => setDarkMode(!darkMode)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
-                        >
-                            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
-                        <button
-                            onClick={() => setIsMobileMenuOpen(true)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
-                        >
-                            <Menu size={20} />
-                        </button>
-                    </div>
+            {/* Main Layout Layer: Offset for fixed sidebar */}
+            <div className="flex-1 flex flex-col min-h-screen md:pl-64 transition-all duration-200">
+                {/* Desktop Header / Dark Mode Toggle */}
+                <header className="hidden md:flex justify-end items-center p-4 gap-4">
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
                 </header>
 
                 {/* Page Content */}
-                <main ref={mainRef} className="flex-1 overflow-auto p-6 md:p-8 scroll-smooth">
+                <main id="main-content" className="flex-1 p-6 md:p-8 pt-20 md:pt-4">
                     <Outlet />
 
                     {/* Scroll Controls (Floating) */}
@@ -223,7 +210,7 @@ export default function Layout() {
                             CDH Platform — Internal Use Only
                         </p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-600 font-mono">
-                            v5A.3-CLEANUP | Build: {new Date().toLocaleDateString()}
+                            v5A.5-DATA-FIX | Build: {new Date().toLocaleDateString()}
                         </p>
                     </footer>
                 </main>
@@ -235,7 +222,7 @@ export default function Layout() {
     );
 }
 
-function NavContent({ onClick, onChatClick }) {
+function NavContent({ user, onClick, onChatClick }) {
     return (
         <>
             <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={onClick} />
@@ -259,6 +246,7 @@ function NavContent({ onClick, onChatClick }) {
             <NavItem to="/vendors" icon={<Users size={20} />} label="Vendors" onClick={onClick} />
             <NavItem to="/retailers" icon={<ShoppingBag size={20} />} label="Retailers" onClick={onClick} />
             <NavItem to="/calendar" icon={<CalendarDays size={20} />} label="Calendar" onClick={onClick} />
+            <NavItem to="/gallery" icon={<ImageIcon size={20} />} label="Photo Gallery" onClick={onClick} />
             <NavItem to="/products" icon={<Box size={20} />} label="Products" onClick={onClick} />
             <NavItem to="/sku-tracker" icon={<Activity size={20} />} label="Live SKU Tracker" onClick={onClick} />
             <div className="pt-4 pb-1">
@@ -266,6 +254,11 @@ function NavContent({ onClick, onChatClick }) {
             </div>
             <NavItem to="/import-staging" icon={<Server size={20} />} label="Data Import" onClick={onClick} />
             <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" onClick={onClick} />
+
+            {/* Admin Link */}
+            {user?.email === 'ronald@cdhassociates.com' && (
+                <NavItem to="/admin" icon={<Shield size={20} />} label="Admin Dashboard" onClick={onClick} />
+            )}
         </>
     );
 }

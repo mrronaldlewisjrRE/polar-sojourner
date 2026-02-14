@@ -16,16 +16,16 @@ export default function SKUTrackerDashboard() {
     const { products, vendors } = useData();
     const [filterVendor, setFilterVendor] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
+    const [dataVersion, setDataVersion] = useState(0); // Used to trigger re-renders
 
     // Auto-Verification Hook
     const { startVerification, stopVerification, isScanning, progress } = useLiveVerification();
 
     useEffect(() => {
-        // Trigger verification for all items on mount (simulate live check)
-        // We need to wait for unifiedItems to be computed, or compute them here temporarily.
-        // Actually, better to trigger it inside the component after items are memoized, 
-        // but we need to avoid infinite loops.
-        // Let's rely on a separate effect that runs once when items are ready.
+        // Listen for SKU updates to refresh the table
+        const handleUpdate = () => setDataVersion(v => v + 1);
+        window.addEventListener('sku-status-update', handleUpdate);
+        return () => window.removeEventListener('sku-status-update', handleUpdate);
     }, []);
 
     // Unified Product List: Context Products + Catalog Products
@@ -84,7 +84,8 @@ export default function SKUTrackerDashboard() {
         });
 
         return [...internalItems, ...catalogItems];
-    }, [products, vendors]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [products, vendors, dataVersion]);
 
     // Trigger Verification manually
     const handleRunCheck = () => {
@@ -127,6 +128,12 @@ export default function SKUTrackerDashboard() {
         if (hours < 24) return `${hours}h ago`;
         const days = Math.floor(hours / 24);
         return `${days}d ago`;
+    };
+
+    // Helper: Format Full Date
+    const formatFullDate = (dateString) => {
+        if (!dateString) return 'Never Checked';
+        return new Date(dateString).toLocaleString();
     };
 
     // Filter Logic
@@ -377,7 +384,7 @@ export default function SKUTrackerDashboard() {
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                     <div className="flex items-center gap-2">
-                                        <span>{getTimeAgo(item.lastChecked)}</span>
+                                        <span title={formatFullDate(item.lastChecked)}>{getTimeAgo(item.lastChecked)}</span>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
