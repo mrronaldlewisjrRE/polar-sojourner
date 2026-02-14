@@ -13,10 +13,12 @@ export default function RetailerManagement() {
     const [editingRetailer, setEditingRetailer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredRetailers = retailers.filter(r =>
-        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRetailers = retailers
+        .filter(r =>
+            r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.location.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     const favorites = retailers.filter(r => r.isFavorite);
 
@@ -296,13 +298,16 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 transition-colors">
-                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-none">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                onClick={e => e.stopPropagation()}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 transition-colors"
+            >
+                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white"><X size={24} /></button>
                 </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
                         <input
