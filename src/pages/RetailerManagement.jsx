@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
 import RetailerSearchModal from '../components/RetailerSearchModal';
+import RetailerEditModal from '../components/RetailerEditModal';
 import { useToast } from '../contexts/ToastContext';
 
 export default function RetailerManagement() {
@@ -306,84 +307,68 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     if (!document.body) return null; // Safety check
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div
-                onClick={e => e.stopPropagation()}
-                className="w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-xl shadow-2xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200"
-            >
-                {/* HEADER */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-[#0f172a] z-20 rounded-t-xl">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl p-2 transition-colors"
-                        aria-label="Close"
+        <RetailerEditModal
+            isOpen={true}
+            onClose={onClose}
+            title={retailer ? 'Edit Retailer' : 'Add New Retailer'}
+        >
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
+                    <input
+                        required
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City, State</label>
+                    <input
+                        required
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        value={formData.location}
+                        onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Address (Optional)</label>
+                    <textarea
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        rows="2"
+                        value={formData.address}
+                        onChange={e => setFormData({ ...formData, address: e.target.value })}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Warehouse Code (K/P)</label>
+                    <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                        value={formData.warehouseCode}
+                        onChange={e => setFormData({ ...formData, warehouseCode: e.target.value })}
                     >
-                        <X size={24} />
-                    </button>
+                        <option value="">-- Manual / Undefined --</option>
+                        <option value="K">Knoxville (K)</option>
+                        <option value="P">Prichard (P)</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Distributor Accounts (JSON)</label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter account numbers for each distributor (e.g., "orgill": "123").</p>
+                    <textarea
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 font-mono text-xs bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-cdh-red outline-none"
+                        rows="8"
+                        value={formData.accounts}
+                        onChange={e => setFormData({ ...formData, accounts: e.target.value })}
+                    />
                 </div>
 
-                {/* BODY */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
-                            <input
-                                required
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City, State</label>
-                            <input
-                                required
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                                value={formData.location}
-                                onChange={e => setFormData({ ...formData, location: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Address (Optional)</label>
-                            <textarea
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                                rows="2"
-                                value={formData.address}
-                                onChange={e => setFormData({ ...formData, address: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Warehouse Code (K/P)</label>
-                            <select
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                                value={formData.warehouseCode}
-                                onChange={e => setFormData({ ...formData, warehouseCode: e.target.value })}
-                            >
-                                <option value="">-- Manual / Undefined --</option>
-                                <option value="K">Knoxville (K)</option>
-                                <option value="P">Prichard (P)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Distributor Accounts (JSON)</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter account numbers for each distributor (e.g., "orgill": "123").</p>
-                            <textarea
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 font-mono text-xs bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-cdh-red outline-none"
-                                rows="8"
-                                value={formData.accounts}
-                                onChange={e => setFormData({ ...formData, accounts: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-                            <button type="submit" className="px-6 py-2 bg-cdh-red text-white font-medium rounded-lg hover:bg-cdh-dark">Save Retailer</button>
-                        </div>
-                    </form>
+                <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+                    <button type="submit" className="px-6 py-2 bg-cdh-red text-white font-medium rounded-lg hover:bg-cdh-dark">Save Retailer</button>
                 </div>
-            </div>
-        </div>,
+            </form>
+        </RetailerEditModal>,
         document.body
     );
 }
