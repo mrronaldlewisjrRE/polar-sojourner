@@ -298,11 +298,10 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-start justify-center pt-10 sm:pt-20 p-4" onClick={onClose}>
             <div
                 onClick={e => e.stopPropagation()}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[75vh] my-8 animate-in fade-in zoom-in-95 duration-200 transition-colors"
-                style={{ maxHeight: '75vh' }}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-5 fade-in duration-200"
             >
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
