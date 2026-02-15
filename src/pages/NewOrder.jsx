@@ -17,6 +17,9 @@ export default function NewOrder() {
     const [distributorId, setDistributorId] = useState('');
     const [items, setItems] = useState([]);
     const [notes, setNotes] = useState('');
+    const [vendorNumber, setVendorNumber] = useState('');
+    const [shippingCost, setShippingCost] = useState('');
+    const [creditAuthNumber, setCreditAuthNumber] = useState('');
     const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
     // Competitor Intelligence parsing
@@ -82,14 +85,20 @@ export default function NewOrder() {
 
     // Handlers
     const addItem = () => {
-        setItems([...items, { sku: '', qty: 1, cost: 0 }]);
+        setItems([...items, { sku: '', mfrNo: '', description: '', qty: 1, cost: 0 }]);
     };
 
     const updateItem = (index, field, value) => {
         const newItems = [...items];
         if (field === 'sku') {
             const product = vendorProducts.find(p => p.sku === value);
-            newItems[index] = { ...newItems[index], sku: value, description: product?.description || '', cost: product?.cost || 0 };
+            newItems[index] = {
+                ...newItems[index],
+                sku: value,
+                description: product?.description || '',
+                cost: product?.cost || 0,
+                mfrNo: product?.mfrNo || '' // items might need mfrNo from product if available
+            };
         } else {
             newItems[index] = { ...newItems[index], [field]: value };
         }
@@ -101,7 +110,9 @@ export default function NewOrder() {
     };
 
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + (item.cost * item.qty), 0);
+        const subtotal = items.reduce((sum, item) => sum + (item.cost * item.qty), 0);
+        const shipping = parseFloat(shippingCost) || 0;
+        return subtotal + shipping;
     };
 
     const onSubmitOrder = (portalData = {}) => {
@@ -137,6 +148,9 @@ export default function NewOrder() {
             distributorId,
             items,
             notes,
+            vendorNumber,
+            shippingCost: parseFloat(shippingCost) || 0,
+            creditAuthNumber,
             total: calculateTotal(),
             orderEmail, // Include the captured email
             timestamp: new Date().toISOString(),
@@ -184,6 +198,10 @@ export default function NewOrder() {
                     distributor={selectedDistributor}
                     items={items}
                     notes={notes}
+                    vendorNumber={vendorNumber}
+                    shippingCost={parseFloat(shippingCost) || 0}
+                    creditAuthNumber={creditAuthNumber}
+                    setCreditAuthNumber={setCreditAuthNumber}
                     total={calculateTotal()}
                     onBack={() => setStep('entry')}
                     onSubmit={() => onSubmitOrder()}
@@ -425,6 +443,16 @@ export default function NewOrder() {
                     </select>
                 </div>
                 <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Number</label>
+                    <input
+                        type="text"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
+                        placeholder="Optional"
+                        value={vendorNumber}
+                        onChange={(e) => setVendorNumber(e.target.value)}
+                    />
+                </div>
+                <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Distributor</label>
                     <div className="relative">
                         <select
@@ -467,7 +495,7 @@ export default function NewOrder() {
                                 <div className="flex-1">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                            SKU
+                                            SKU / MFR No.
                                             {item.sku && <LiveStatusIndicator sku={item.sku} storeName={selectedVendor?.name} />}
                                         </label>
                                         <ProductSearchButton
@@ -476,22 +504,41 @@ export default function NewOrder() {
                                             vendorName={selectedVendor?.name}
                                         />
                                     </div>
-                                    <input
-                                        type="text"
-                                        list={`sku-list-${index}`}
-                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
-                                        placeholder="Type or select SKU..."
-                                        value={item.sku}
-                                        onChange={(e) => updateItem(index, 'sku', e.target.value)}
-                                    />
-                                    <datalist id={`sku-list-${index}`}>
-                                        {vendorProducts.map(p => (
-                                            <option key={p.sku} value={p.sku}>{p.description}</option>
-                                        ))}
-                                    </datalist>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                list={`sku-list-${index}`}
+                                                className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
+                                                placeholder="SKU..."
+                                                value={item.sku}
+                                                onChange={(e) => updateItem(index, 'sku', e.target.value)}
+                                            />
+                                            <datalist id={`sku-list-${index}`}>
+                                                {vendorProducts.map(p => (
+                                                    <option key={p.sku} value={p.sku}>{p.description}</option>
+                                                ))}
+                                            </datalist>
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
+                                                placeholder="MFR No..."
+                                                value={item.mfrNo || ''}
+                                                onChange={(e) => updateItem(index, 'mfrNo', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex-[2] pt-6">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{item.description || '—'}</p>
+                                    <input
+                                        type="text"
+                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
+                                        placeholder="Item Description"
+                                        value={item.description}
+                                        onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                    />
                                 </div>
                                 <div className="w-24">
                                     <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Unit Cost</label>
@@ -556,6 +603,22 @@ export default function NewOrder() {
                             onChange={(e) => setNotes(e.target.value)}
                         />
                     </div>
+
+                    <div className="mt-6 flex justify-end items-center gap-3">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Shipping Cost:</label>
+                        <div className="relative w-32">
+                            <span className="absolute left-2 top-1.5 text-gray-500 text-sm">$</span>
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 pl-5 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                value={shippingCost}
+                                onChange={(e) => setShippingCost(e.target.value)}
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -587,7 +650,7 @@ export default function NewOrder() {
     );
 }
 
-function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBack, onSubmit, onOpenPortal }) {
+function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, total, onBack, onSubmit, onOpenPortal }) {
     const isPortalRequired = vendor?.submissionMethod === 'ASSISTED_PORTAL' || distributor?.submissionMethod === 'ASSISTED_PORTAL';
     const portalTarget = vendor?.submissionMethod === 'ASSISTED_PORTAL' ? vendor : distributor;
 
@@ -622,6 +685,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                         <div>
                             <span className="block text-gray-500 dark:text-gray-400 mb-1">Vendor</span>
                             <span className="font-medium text-gray-900 dark:text-white block text-lg">{vendor?.name}</span>
+                            {vendorNumber && <span className="text-sm text-gray-500 dark:text-gray-400">Vendor #: {vendorNumber}</span>}
                         </div>
                     </div>
 
@@ -638,7 +702,9 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                                 {items.map((item, i) => (
                                     <tr key={i}>
                                         <td className="py-3">
-                                            <div className="font-medium text-gray-900 dark:text-white">{item.sku}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">
+                                                {item.sku} {item.mfrNo && <span className="text-gray-400 font-normal">({item.mfrNo})</span>}
+                                            </div>
                                             <div className="text-gray-500 dark:text-gray-400">{item.description}</div>
                                         </td>
                                         <td className="py-3 text-center text-gray-900 dark:text-gray-200">{item.qty}</td>
@@ -646,8 +712,18 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                                     </tr>
                                 ))}
                                 <tr>
-                                    <td colSpan="2" className="pt-4 text-right font-medium text-gray-900 dark:text-white">Est. Total</td>
-                                    <td className="pt-4 text-right font-bold text-lg text-cdh-red dark:text-red-400">${total.toFixed(2)}</td>
+                                    <td colSpan="2" className="pt-4 text-right font-medium text-gray-900 dark:text-white">Subtotal</td>
+                                    <td className="pt-4 text-right font-medium text-gray-900 dark:text-white">${items.reduce((sum, item) => sum + (item.cost * item.qty), 0).toFixed(2)}</td>
+                                </tr>
+                                {shippingCost > 0 && (
+                                    <tr>
+                                        <td colSpan="2" className="pt-1 text-right font-medium text-gray-600 dark:text-gray-400">Shipping</td>
+                                        <td className="pt-1 text-right font-medium text-gray-600 dark:text-gray-400">${shippingCost.toFixed(2)}</td>
+                                    </tr>
+                                )}
+                                <tr>
+                                    <td colSpan="2" className="pt-2 text-right font-bold text-gray-900 dark:text-white">Total</td>
+                                    <td className="pt-2 text-right font-bold text-lg text-cdh-red dark:text-red-400">${total.toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -661,6 +737,16 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, total, onBa
                     )}
 
                     <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number</label>
+                            <input
+                                type="text"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                placeholder="Enter auth number..."
+                                value={creditAuthNumber}
+                                onChange={(e) => setCreditAuthNumber(e.target.value)}
+                            />
+                        </div>
                         <div className="flex items-center gap-3 mb-6">
                             <input type="checkbox" id="confirm" className="w-5 h-5 text-cdh-red rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-cdh-red" />
                             <label htmlFor="confirm" className="text-sm text-gray-700 dark:text-gray-300 select-none">I confirm this order is accurate and ready for processing.</label>
