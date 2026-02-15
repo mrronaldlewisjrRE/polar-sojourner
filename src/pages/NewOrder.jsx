@@ -518,13 +518,7 @@ export default function NewOrder() {
                                         value={item.itemName || ''}
                                         onChange={(e) => updateItem(index, 'itemName', e.target.value)}
                                     />
-                                    <input
-                                        type="text"
-                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
-                                        placeholder="Extended Description (Optional)"
-                                        value={item.description}
-                                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                    />
+                                    {/* Extended Description Removed per request */}
                                 </div>
                                 <div className="w-24">
                                     <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Unit Cost</label>
@@ -711,7 +705,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                             <div className="font-medium text-gray-900 dark:text-white">
                                                 {item.itemName || item.sku} {item.mfrNo && <span className="text-gray-400 font-normal">({item.mfrNo})</span>}
                                             </div>
-                                            <div className="text-gray-500 dark:text-gray-400 text-xs">{item.description}</div>
+                                            {/* Description removed from review */}
                                         </td>
                                         <td className="py-3 text-center text-gray-900 dark:text-gray-200">{item.qty}</td>
                                         <td className="py-3 text-right text-gray-900 dark:text-gray-200">${(item.cost * item.qty).toFixed(2)}</td>
