@@ -308,26 +308,26 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-            <div
-                onClick={e => e.stopPropagation()}
-                className="bg-white dark:bg-[#111] w-full max-w-2xl max-h-[85vh] rounded-xl shadow-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
-                style={{ maxHeight: '85vh' }}
-            >
-                {/* Header - Fixed at top of flex container */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] z-10 shrink-0">
+        // 1) OUTER MODAL WRAPPER
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+
+            {/* 2) MODAL CONTAINER */}
+            <div className="w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-xl shadow-2xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200">
+
+                {/* 3) HEADER (WITH CLOSE BUTTON) */}
+                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-[#0f172a] z-20 rounded-t-xl">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl p-2 transition-colors"
                         aria-label="Close"
                     >
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Scrollable Body - min-h-0 is CRITICAL for nested flex scrolling */}
-                <div className="p-6 overflow-y-auto flex-1 min-h-0 bg-white dark:bg-[#111]">
+                {/* 4) BODY (SCROLLABLE AREA) */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
@@ -379,8 +379,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                             />
                         </div>
 
-                        {/* Footer (Inside Form) */}
-                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
                             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
                             <button type="submit" className="px-6 py-2 bg-cdh-red text-white font-medium rounded-lg hover:bg-cdh-dark">Save Retailer</button>
                         </div>
