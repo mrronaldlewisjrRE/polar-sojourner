@@ -652,62 +652,78 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
 
     const portalTarget = distributor; // Strictly distributor only
 
-    // PDF Generation
+    // PDF Generation Helper
+    const generatePODoc = async () => {
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+
+        doc.setFontSize(20);
+        doc.text("Purchase Order", 105, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 25);
+        doc.text(`Retailer: ${retailer?.name}`, 14, 30);
+        doc.text(`Vendor: ${vendor?.name}`, 14, 35);
+        doc.text(`Distributor: ${distributor?.name || 'Manual'}`, 14, 40);
+
+        if (vendorNumber) doc.text(`Vendor #: ${vendorNumber}`, 14, 45);
+        if (customerNumber) doc.text(`Customer #: ${customerNumber}`, 14, 50);
+        if (creditAuthNumber) doc.text(`Auth #: ${creditAuthNumber}`, 14, 55);
+
+        let y = 65;
+        doc.setLineWidth(0.5);
+        doc.line(14, y - 2, 196, y - 2);
+        doc.text("Item", 14, y);
+        doc.text("Qty", 140, y);
+        doc.text("Cost", 160, y);
+        doc.text("Total", 180, y);
+        doc.line(14, y + 2, 196, y + 2);
+        y += 8;
+
+        items.forEach(item => {
+            const name = item.itemName || item.sku;
+            doc.text(name.substring(0, 50), 14, y);
+            doc.text(String(item.qty), 140, y);
+            doc.text(`$${Number(item.cost).toFixed(2)}`, 160, y);
+            doc.text(`$${(item.cost * item.qty).toFixed(2)}`, 180, y);
+            y += 6;
+            if (item.mfrNo) {
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(`MFR: ${item.mfrNo}`, 14, y);
+                doc.setTextColor(0);
+                doc.setFontSize(10);
+                y += 6;
+            }
+        });
+
+        y += 4;
+        doc.line(14, y, 196, y);
+        y += 6;
+        doc.setFontSize(12);
+        doc.text(`Total: $${total.toFixed(2)}`, 180, y, { align: "right" });
+
+        return doc;
+    };
+
     const handleGeneratePO = async () => {
         try {
-            const { jsPDF } = await import('jspdf');
-            const doc = new jsPDF();
-
-            doc.setFontSize(20);
-            doc.text("Purchase Order", 105, 15, { align: "center" });
-
-            doc.setFontSize(10);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 25);
-            doc.text(`Retailer: ${retailer?.name}`, 14, 30);
-            doc.text(`Vendor: ${vendor?.name}`, 14, 35);
-            doc.text(`Distributor: ${distributor?.name || 'Manual'}`, 14, 40);
-
-            if (vendorNumber) doc.text(`Vendor #: ${vendorNumber}`, 14, 45);
-            if (customerNumber) doc.text(`Customer #: ${customerNumber}`, 14, 50);
-            if (creditAuthNumber) doc.text(`Auth #: ${creditAuthNumber}`, 14, 55);
-
-            let y = 65;
-            doc.setLineWidth(0.5);
-            doc.line(14, y - 2, 196, y - 2);
-            doc.text("Item", 14, y);
-            doc.text("Qty", 140, y);
-            doc.text("Cost", 160, y);
-            doc.text("Total", 180, y);
-            doc.line(14, y + 2, 196, y + 2);
-            y += 8;
-
-            items.forEach(item => {
-                const name = item.itemName || item.sku;
-                doc.text(name.substring(0, 50), 14, y);
-                doc.text(String(item.qty), 140, y);
-                doc.text(`$${Number(item.cost).toFixed(2)}`, 160, y);
-                doc.text(`$${(item.cost * item.qty).toFixed(2)}`, 180, y);
-                y += 6;
-                if (item.mfrNo) {
-                    doc.setFontSize(8);
-                    doc.setTextColor(100);
-                    doc.text(`MFR: ${item.mfrNo}`, 14, y);
-                    doc.setTextColor(0);
-                    doc.setFontSize(10);
-                    y += 6;
-                }
-            });
-
-            y += 4;
-            doc.line(14, y, 196, y);
-            y += 6;
-            doc.setFontSize(12);
-            doc.text(`Total: $${total.toFixed(2)}`, 180, y, { align: "right" });
-
+            const doc = await generatePODoc();
             doc.save(`PO_${retailer?.name}_${new Date().toISOString().split('T')[0]}.pdf`);
         } catch (error) {
             console.error("PDF Gen Error:", error);
             alert("Failed to generate PDF. Check console.");
+        }
+    };
+
+    const handlePreviewPO = async () => {
+        try {
+            const doc = await generatePODoc();
+            const blobPdf = doc.output('bloburl');
+            window.open(blobPdf, '_blank');
+        } catch (error) {
+            console.error("PDF Preview Error:", error);
+            alert("Failed to preview PDF. Check console.");
         }
     };
 
@@ -886,13 +902,21 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                             </p>
                         </div>
 
-                        {/* PO Button */}
-                        <button
-                            onClick={handleGeneratePO}
-                            className="w-full mb-3 bg-gray-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-700 shadow-sm transition-colors flex items-center justify-center gap-2"
-                        >
-                            <span className="text-lg">📄</span> Download Purchase Order (PDF)
-                        </button>
+                        {/* PO Buttons */}
+                        <div className="flex gap-2 mb-3">
+                            <button
+                                onClick={handlePreviewPO}
+                                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 border border-gray-300 shadow-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span className="text-lg">👁️</span> Preview PO
+                            </button>
+                            <button
+                                onClick={handleGeneratePO}
+                                className="flex-1 bg-gray-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-700 shadow-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span className="text-lg">⬇️</span> Download PO
+                            </button>
+                        </div>
 
                         <div className="flex items-center gap-3 mb-6">
                             <input type="checkbox" id="confirm" className="w-5 h-5 text-cdh-red rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-cdh-red" />
