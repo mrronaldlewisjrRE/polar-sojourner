@@ -274,8 +274,23 @@ export const DataProvider = ({ children }) => {
             ...cleanOrder,
             created_at: new Date().toISOString()
         };
-        const { error } = await supabase.from('orders').insert([newOrder]);
-        if (error) console.error("Error adding order:", error);
+        const { data, error } = await supabase.from('orders').insert([newOrder]).select();
+
+        if (error) {
+            console.error("Error adding order:", error);
+            return { error };
+        }
+
+        if (data && data[0]) {
+            const insertedOrder = data[0];
+            setOrders(prev => {
+                // Avoid duplicates from Realtime
+                if (prev.find(o => o.id === insertedOrder.id)) return prev;
+                return [insertedOrder, ...prev];
+            });
+            return { data: insertedOrder };
+        }
+        return { error: { message: "No data returned" } };
     };
 
     const updateOrder = async (id, updates) => {

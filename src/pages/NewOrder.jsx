@@ -9,7 +9,7 @@ import PortalSubmissionModal from '../components/PortalSubmissionModal';
 import { useToast } from '../contexts/ToastContext';
 
 export default function NewOrder() {
-    const { retailers: RETAILERS, vendors: VENDORS, distributors: DISTRIBUTORS, products: PRODUCTS, addOrder } = useData();
+    const { retailers: RETAILERS, vendors: VENDORS, distributors: DISTRIBUTORS, products: PRODUCTS, addOrder, updateRetailer } = useData();
     const toast = useToast();
     const [step, setStep] = useState('entry'); // 'entry', 'review', 'submitted'
     const [retailerId, setRetailerId] = useState('');
@@ -20,6 +20,7 @@ export default function NewOrder() {
     const [vendorNumber, setVendorNumber] = useState('');
     const [shippingCost, setShippingCost] = useState('');
     const [creditAuthNumber, setCreditAuthNumber] = useState('');
+    const [orderEmail, setOrderEmail] = useState('');
     const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
     // Competitor Intelligence parsing
@@ -83,6 +84,13 @@ export default function NewOrder() {
         }
     }, [selectedVendor, selectedRetailer, DISTRIBUTORS]);
 
+    // Sync Email
+    useEffect(() => {
+        if (selectedRetailer) {
+            setOrderEmail(selectedRetailer.email || '');
+        }
+    }, [selectedRetailer]);
+
     // Handlers
     const addItem = () => {
         setItems([...items, { sku: '', mfrNo: '', itemName: '', description: '', qty: 1, cost: 0 }]);
@@ -116,31 +124,18 @@ export default function NewOrder() {
         return subtotal + shipping;
     };
 
-    const onSubmitOrder = (portalData = {}) => {
-        // Validation: Email - SOFT CHECK
-        // If missing, prompt user to enter one for this specific order, but do not block.
-        let orderEmail = selectedRetailer.email;
-        let updateProfile = false;
+    const onSubmitOrder = async (portalData = {}) => {
+        // Validation: Email - OPTIONAL but Recommended
+        if (!orderEmail) {
+            console.log("Submitting order without email (optional).");
+        }
 
-        const isStandardFlow = !portalData.submissionStatus;
-
-        if (isStandardFlow && !orderEmail) {
-            const manualEmail = prompt(
-                `SOFT ALERT: MISSING EMAIL\n\n${selectedRetailer.name} does not have an email on file.\n\nPlease enter an email address for THIS ORDER to proceed.\n(Leave empty to submit anyway, but this is not recommended)`
-            );
-
-            if (manualEmail) {
-                orderEmail = manualEmail;
-                // In a real app, we'd offer a checkbox or second prompt to "Save to Profile"
-                // For MVP, we'll just log this intent or use it for the order.
-                if (window.confirm(`Save ${manualEmail} to retailer profile for future orders?`)) {
-                    updateProfile = true;
-                }
-            } else {
-                // If user hits Cancel or leaves empty, we still allow submission per new "Velocity" rule
-                // But we tag it in notes or console
-                console.warn('Order submitted without email per Rep override.');
-            }
+        // Auto-update Retailer Profile if email provided/changed
+        if (orderEmail && selectedRetailer && orderEmail !== selectedRetailer.email) {
+            console.log("Updating retailer email profile...");
+            // Use updateRetailer from context (fire and forget for now, or await?)
+            // We'll await to ensure it sticks.
+            await updateRetailer(selectedRetailer.id, { email: orderEmail });
         }
 
         const order = {
@@ -153,18 +148,18 @@ export default function NewOrder() {
             shippingCost: parseFloat(shippingCost) || 0,
             creditAuthNumber,
             total: calculateTotal(),
-            orderEmail, // Include the captured email
+            orderEmail,
             timestamp: new Date().toISOString(),
             ...portalData
         };
 
-        // If we needed to update profile, we would call an updateRetailer() context method here.
-        // For now, we just proceed with the order.
-        if (updateProfile) {
-            console.log(`[FUTURE] Would save email ${orderEmail} to profile for ${retailerId}`);
+        const result = await addOrder(order);
+
+        if (result.error) {
+            alert(`Failed to save order: ${result.error.message}\n\nPlease check your new fields (Vendor #, Auth #) match database schema.`);
+            return;
         }
 
-        addOrder(order);
         setIsPortalModalOpen(false);
         setStep('submitted');
     };
@@ -203,6 +198,8 @@ export default function NewOrder() {
                     shippingCost={parseFloat(shippingCost) || 0}
                     creditAuthNumber={creditAuthNumber}
                     setCreditAuthNumber={setCreditAuthNumber}
+                    orderEmail={orderEmail}
+                    setOrderEmail={setOrderEmail}
                     total={calculateTotal()}
                     onBack={() => setStep('entry')}
                     onSubmit={() => onSubmitOrder()}
@@ -630,7 +627,7 @@ export default function NewOrder() {
     );
 }
 
-function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, total, onBack, onSubmit }) {
+function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, orderEmail, setOrderEmail, total, onBack, onSubmit }) {
     const [verifiedVendorNo, setVerifiedVendorNo] = React.useState(false);
     const [verifiedTotalCost, setVerifiedTotalCost] = React.useState(false);
 
@@ -776,6 +773,33 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                 value={creditAuthNumber}
                                 onChange={(e) => setCreditAuthNumber(e.target.value)}
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                placeholder="Enter auth number..."
+                                value={creditAuthNumber}
+                                onChange={(e) => setCreditAuthNumber(e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Order Email (Optional)</label>
+                            <div className="flex flex-col gap-1">
+                                <input
+                                    type="email"
+                                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                    placeholder="retailer@example.com"
+                                    value={orderEmail}
+                                    onChange={(e) => setOrderEmail(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Updating this email will save it to the Retailer's profile.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-3 mb-6">
