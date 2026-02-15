@@ -206,7 +206,6 @@ export default function NewOrder() {
                     total={calculateTotal()}
                     onBack={() => setStep('entry')}
                     onSubmit={() => onSubmitOrder()}
-                    onOpenPortal={() => setIsPortalModalOpen(true)}
                 />
                 <PortalSubmissionModal
                     isOpen={isPortalModalOpen}
@@ -510,18 +509,19 @@ export default function NewOrder() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex-[2] pt-6">
+                                <div className="flex-[2]">
+                                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Item Details</label>
                                     <input
                                         type="text"
                                         className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400 mb-2"
-                                        placeholder="Item Name"
+                                        placeholder="Item Name (Required)"
                                         value={item.itemName || ''}
                                         onChange={(e) => updateItem(index, 'itemName', e.target.value)}
                                     />
                                     <input
                                         type="text"
                                         className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
-                                        placeholder="Extended Description"
+                                        placeholder="Extended Description (Optional)"
                                         value={item.description}
                                         onChange={(e) => updateItem(index, 'description', e.target.value)}
                                     />
@@ -636,25 +636,29 @@ export default function NewOrder() {
     );
 }
 
-function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, total, onBack, onSubmit, onOpenPortal }) {
-    const isPortalRequired = true; // Always show portal option now
-    const portalTarget = distributor?.portalUrl ? distributor : vendor; // Prefer distributor portal
+function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, total, onBack, onSubmit }) {
+    const [verifiedVendorNo, setVerifiedVendorNo] = React.useState(false);
+    const [verifiedTotalCost, setVerifiedTotalCost] = React.useState(false);
+
+    const portalTarget = distributor; // Strictly distributor only
 
     const handleOpenPortal = () => {
         if (portalTarget?.portalUrl) {
             window.open(portalTarget.portalUrl, '_blank');
         } else {
-            alert(`No portal URL configured for ${portalTarget?.name}`);
+            alert(`No portal URL configured for Distributor: ${portalTarget?.name || 'Unknown'}`);
         }
     };
 
     const handleInternalSubmit = () => {
         if (!creditAuthNumber) {
-            alert("Please enter the Credit Authorization Number to complete the order.");
+            alert("Please enter the Credit Authorization Number.");
             return;
         }
         onSubmit();
     };
+
+    const isSubmitDisabled = !verifiedVendorNo || !verifiedTotalCost || !creditAuthNumber;
 
     return (
         <div className="max-w-2xl mx-auto py-8">
@@ -738,9 +742,39 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                         </div>
                     )}
 
-                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number</label>
+                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+
+                        {/* Verification Checkboxes */}
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800 space-y-3">
+                            <h3 className="font-semibold text-orange-900 dark:text-orange-200 text-sm">Mandatory Verification</h3>
+
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1 w-4 h-4 text-cdh-red rounded border-gray-300 dark:border-gray-600 focus:ring-cdh-red"
+                                    checked={verifiedVendorNo}
+                                    onChange={e => setVerifiedVendorNo(e.target.checked)}
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    I have verified the <strong>Vendor Number</strong> on the {distributor?.name || 'Distributor'} Portal.
+                                </span>
+                            </label>
+
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1 w-4 h-4 text-cdh-red rounded border-gray-300 dark:border-gray-600 focus:ring-cdh-red"
+                                    checked={verifiedTotalCost}
+                                    onChange={e => setVerifiedTotalCost(e.target.checked)}
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    I have verified the <strong>Total Cost</strong> matches the distributor's system.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
@@ -749,6 +783,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                 onChange={(e) => setCreditAuthNumber(e.target.value)}
                             />
                         </div>
+
                         <div className="flex items-center gap-3 mb-6">
                             <input type="checkbox" id="confirm" className="w-5 h-5 text-cdh-red rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-cdh-red" />
                             <label htmlFor="confirm" className="text-sm text-gray-700 dark:text-gray-300 select-none">I confirm this order is accurate and ready for processing.</label>
@@ -760,13 +795,14 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                             className="w-full mb-3 bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 shadow-md transition-colors flex items-center justify-center gap-2"
                         >
                             <Search size={20} className="w-5 h-5" />
-                            Open {portalTarget?.name} Portal
+                            Open {portalTarget?.name || 'Distributor'} Portal
                         </button>
 
                         <button
                             data-testid="submit-internal"
                             onClick={handleInternalSubmit}
-                            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 shadow-md transition-colors"
+                            disabled={isSubmitDisabled}
+                            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Record Order Internally
                         </button>

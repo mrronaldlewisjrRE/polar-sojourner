@@ -14,7 +14,7 @@ export default function OrderHistory() {
         const vendor = vendors.find(v => v.id === order.vendorId);
 
         // Search Filter
-        const searchString = `${order.id} ${retailer?.name} ${vendor?.name}`.toLowerCase();
+        const searchString = `${order.id} ${retailer?.name} ${vendor?.name} ${order.vendorNumber || ''} ${order.creditAuthNumber || ''}`.toLowerCase();
         const matchesSearch = searchString.includes(searchTerm.toLowerCase());
 
         // Status Filter
@@ -41,7 +41,7 @@ export default function OrderHistory() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Search PO #, Retailer, or Vendor..."
+                            placeholder="Search PO #, Retailer, Vendor, Auth #..."
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -150,6 +150,7 @@ export default function OrderHistory() {
                                                                 <thead className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 text-left">
                                                                     <tr>
                                                                         <th className="py-2">SKU</th>
+                                                                        <th className="py-2">MFR No</th>
                                                                         <th className="py-2">Description</th>
                                                                         <th className="py-2 text-center">Qty</th>
                                                                         <th className="py-2 text-right">Cost</th>
@@ -160,14 +161,25 @@ export default function OrderHistory() {
                                                                     {order.items.map((item, idx) => (
                                                                         <tr key={idx}>
                                                                             <td className="py-2 font-mono text-xs text-gray-900 dark:text-gray-300">{item.sku}</td>
+                                                                            <td className="py-2 text-gray-500 dark:text-gray-400 text-xs">{item.mfrNo || '-'}</td>
                                                                             <td className="py-2 text-gray-600 dark:text-gray-400">{item.description}</td>
                                                                             <td className="py-2 text-center text-gray-900 dark:text-gray-300">{item.qty}</td>
-                                                                            <td className="py-2 text-right text-gray-500 dark:text-gray-400">${item.cost.toFixed(2)}</td>
+                                                                            <td className="py-2 text-right text-gray-500 dark:text-gray-400">${Number(item.cost).toFixed(2)}</td>
                                                                             <td className="py-2 text-right font-medium text-gray-900 dark:text-white">${(item.cost * item.qty).toFixed(2)}</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
                                                             </table>
+                                                            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                                                                <div>
+                                                                    <span className="text-gray-500 dark:text-gray-400 block">Vendor Number:</span>
+                                                                    <span className="font-medium text-gray-900 dark:text-white">{order.vendorNumber || 'N/A'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-gray-500 dark:text-gray-400 block">Credit Auth #:</span>
+                                                                    <span className="font-medium text-gray-900 dark:text-white">{order.creditAuthNumber || 'N/A'}</span>
+                                                                </div>
+                                                            </div>
                                                             {order.notes && (
                                                                 <div className="mt-4 text-sm bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-100 dark:border-yellow-900/30 text-yellow-800 dark:text-yellow-200">
                                                                     <strong>Notes:</strong> {order.notes}
