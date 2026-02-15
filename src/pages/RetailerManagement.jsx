@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
@@ -256,11 +256,7 @@ const levenshtein = (a, b) => {
     return matrix[b.length][a.length];
 };
 
-import React, { useState, useEffect } from 'react';
 
-// ... (other imports)
-
-// ... (main component)
 
 function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     const toast = useToast();
@@ -315,22 +311,23 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
             <div
                 onClick={e => e.stopPropagation()}
-                className="bg-white dark:bg-[#111] w-full max-w-2xl max-h-[90vh] rounded-xl shadow-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-white dark:bg-[#111] w-full max-w-2xl max-h-[85vh] rounded-xl shadow-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                style={{ maxHeight: '85vh' }}
             >
-                {/* Sticky Header */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-[#111] z-10">
+                {/* Header - Fixed at top of flex container */}
+                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] z-10 shrink-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl p-2"
+                        className="text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         aria-label="Close"
                     >
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Scrollable Body */}
-                <div className="p-6 overflow-y-auto flex-1 bg-white dark:bg-[#111]">
+                {/* Scrollable Body - min-h-0 is CRITICAL for nested flex scrolling */}
+                <div className="p-6 overflow-y-auto flex-1 min-h-0 bg-white dark:bg-[#111]">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retailer Name</label>
