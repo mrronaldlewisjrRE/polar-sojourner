@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, AlertTriangle, Star, Globe } from 'lucide-react';
@@ -116,9 +117,6 @@ export default function RetailerManagement() {
 
                     return (
                         <div key={retailer.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition-all relative group">
-
-                            {/* Favorite Toggle (Top Right) */}
-
 
                             {/* Missing Data Warning Badge */}
                             {isManualReview && (
@@ -256,8 +254,6 @@ const levenshtein = (a, b) => {
     return matrix[b.length][a.length];
 };
 
-
-
 function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
     const toast = useToast();
     const [formData, setFormData] = useState({
@@ -307,14 +303,15 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
         }
     };
 
-    return (
-        // 1) OUTER MODAL WRAPPER
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    if (!document.body) return null; // Safety check
 
-            {/* 2) MODAL CONTAINER */}
-            <div className="w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-xl shadow-2xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200">
-
-                {/* 3) HEADER (WITH CLOSE BUTTON) */}
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div
+                onClick={e => e.stopPropagation()}
+                className="w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-xl shadow-2xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200"
+            >
+                {/* HEADER */}
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-[#0f172a] z-20 rounded-t-xl">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{retailer ? 'Edit Retailer' : 'Add New Retailer'}</h2>
                     <button
@@ -326,7 +323,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                     </button>
                 </div>
 
-                {/* 4) BODY (SCROLLABLE AREA) */}
+                {/* BODY */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
@@ -386,6 +383,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
                     </form>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
