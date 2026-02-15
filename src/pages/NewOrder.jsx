@@ -85,7 +85,7 @@ export default function NewOrder() {
 
     // Handlers
     const addItem = () => {
-        setItems([...items, { sku: '', mfrNo: '', description: '', qty: 1, cost: 0 }]);
+        setItems([...items, { sku: '', mfrNo: '', itemName: '', description: '', qty: 1, cost: 0 }]);
     };
 
     const updateItem = (index, field, value) => {
@@ -95,6 +95,7 @@ export default function NewOrder() {
             newItems[index] = {
                 ...newItems[index],
                 sku: value,
+                itemName: product?.description || '', // Default name to desc
                 description: product?.description || '',
                 cost: product?.cost || 0,
                 mfrNo: product?.mfrNo || '' // items might need mfrNo from product if available
@@ -512,8 +513,15 @@ export default function NewOrder() {
                                 <div className="flex-[2] pt-6">
                                     <input
                                         type="text"
+                                        className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400 mb-2"
+                                        placeholder="Item Name"
+                                        value={item.itemName || ''}
+                                        onChange={(e) => updateItem(index, 'itemName', e.target.value)}
+                                    />
+                                    <input
+                                        type="text"
                                         className="w-full border border-gray-300 dark:border-gray-500 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400"
-                                        placeholder="Item Description"
+                                        placeholder="Extended Description"
                                         value={item.description}
                                         onChange={(e) => updateItem(index, 'description', e.target.value)}
                                     />
@@ -629,8 +637,24 @@ export default function NewOrder() {
 }
 
 function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, total, onBack, onSubmit, onOpenPortal }) {
-    const isPortalRequired = vendor?.submissionMethod === 'ASSISTED_PORTAL' || distributor?.submissionMethod === 'ASSISTED_PORTAL';
-    const portalTarget = vendor?.submissionMethod === 'ASSISTED_PORTAL' ? vendor : distributor;
+    const isPortalRequired = true; // Always show portal option now
+    const portalTarget = distributor?.portalUrl ? distributor : vendor; // Prefer distributor portal
+
+    const handleOpenPortal = () => {
+        if (portalTarget?.portalUrl) {
+            window.open(portalTarget.portalUrl, '_blank');
+        } else {
+            alert(`No portal URL configured for ${portalTarget?.name}`);
+        }
+    };
+
+    const handleInternalSubmit = () => {
+        if (!creditAuthNumber) {
+            alert("Please enter the Credit Authorization Number to complete the order.");
+            return;
+        }
+        onSubmit();
+    };
 
     return (
         <div className="max-w-2xl mx-auto py-8">
@@ -681,9 +705,9 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                     <tr key={i}>
                                         <td className="py-3">
                                             <div className="font-medium text-gray-900 dark:text-white">
-                                                {item.sku} {item.mfrNo && <span className="text-gray-400 font-normal">({item.mfrNo})</span>}
+                                                {item.itemName || item.sku} {item.mfrNo && <span className="text-gray-400 font-normal">({item.mfrNo})</span>}
                                             </div>
-                                            <div className="text-gray-500 dark:text-gray-400">{item.description}</div>
+                                            <div className="text-gray-500 dark:text-gray-400 text-xs">{item.description}</div>
                                         </td>
                                         <td className="py-3 text-center text-gray-900 dark:text-gray-200">{item.qty}</td>
                                         <td className="py-3 text-right text-gray-900 dark:text-gray-200">${(item.cost * item.qty).toFixed(2)}</td>
@@ -730,24 +754,22 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                             <label htmlFor="confirm" className="text-sm text-gray-700 dark:text-gray-300 select-none">I confirm this order is accurate and ready for processing.</label>
                         </div>
 
-                        {isPortalRequired ? (
-                            <button
-                                data-testid="submit-via-portal"
-                                onClick={onOpenPortal}
-                                className="w-full bg-cdh-red text-white py-3 rounded-lg font-bold text-lg hover:bg-cdh-dark shadow-md transition-colors flex items-center justify-center gap-2"
-                            >
-                                <Search size={20} className="w-5 h-5" />
-                                Submit via {portalTarget?.name} Portal
-                            </button>
-                        ) : (
-                            <button
-                                data-testid="submit-order"
-                                onClick={onSubmit}
-                                className="w-full bg-cdh-red text-white py-3 rounded-lg font-bold text-lg hover:bg-cdh-dark shadow-md transition-colors"
-                            >
-                                Submit Order
-                            </button>
-                        )}
+                        {/* Portal Button */}
+                        <button
+                            onClick={handleOpenPortal}
+                            className="w-full mb-3 bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 shadow-md transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Search size={20} className="w-5 h-5" />
+                            Open {portalTarget?.name} Portal
+                        </button>
+
+                        <button
+                            data-testid="submit-internal"
+                            onClick={handleInternalSubmit}
+                            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 shadow-md transition-colors"
+                        >
+                            Record Order Internally
+                        </button>
                     </div>
                 </div>
             </div>
