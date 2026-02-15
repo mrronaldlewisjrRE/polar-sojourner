@@ -18,9 +18,11 @@ export default function NewOrder() {
     const [items, setItems] = useState([]);
     const [notes, setNotes] = useState('');
     const [vendorNumber, setVendorNumber] = useState('');
+    const [customerNumber, setCustomerNumber] = useState('');
     const [shippingCost, setShippingCost] = useState('');
     const [creditAuthNumber, setCreditAuthNumber] = useState('');
     const [orderEmail, setOrderEmail] = useState('');
+    const [internalEmail, setInternalEmail] = useState('');
     const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
     // Competitor Intelligence parsing
@@ -144,11 +146,15 @@ export default function NewOrder() {
             distributorId,
             items,
             notes,
+            items,
+            notes,
             vendorNumber,
+            customerNumber,
             shippingCost: parseFloat(shippingCost) || 0,
             creditAuthNumber,
             total: calculateTotal(),
             orderEmail,
+            internalEmail,
             timestamp: new Date().toISOString(),
             ...portalData
         };
@@ -195,11 +201,14 @@ export default function NewOrder() {
                     items={items}
                     notes={notes}
                     vendorNumber={vendorNumber}
+                    customerNumber={customerNumber}
                     shippingCost={parseFloat(shippingCost) || 0}
                     creditAuthNumber={creditAuthNumber}
                     setCreditAuthNumber={setCreditAuthNumber}
                     orderEmail={orderEmail}
                     setOrderEmail={setOrderEmail}
+                    internalEmail={internalEmail}
+                    setInternalEmail={setInternalEmail}
                     total={calculateTotal()}
                     onBack={() => setStep('entry')}
                     onSubmit={() => onSubmitOrder()}
@@ -428,6 +437,16 @@ export default function NewOrder() {
                     />
                 </div>
                 <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Number</label>
+                    <input
+                        type="text"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
+                        placeholder="Optional"
+                        value={customerNumber}
+                        onChange={(e) => setCustomerNumber(e.target.value)}
+                    />
+                </div>
+                <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Distributor</label>
                     <div className="relative">
                         <select
@@ -627,11 +646,70 @@ export default function NewOrder() {
     );
 }
 
-function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, orderEmail, setOrderEmail, total, onBack, onSubmit }) {
+function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumber, customerNumber, shippingCost, creditAuthNumber, setCreditAuthNumber, orderEmail, setOrderEmail, internalEmail, setInternalEmail, total, onBack, onSubmit }) {
     const [verifiedVendorNo, setVerifiedVendorNo] = React.useState(false);
     const [verifiedTotalCost, setVerifiedTotalCost] = React.useState(false);
 
     const portalTarget = distributor; // Strictly distributor only
+
+    // PDF Generation
+    const handleGeneratePO = async () => {
+        try {
+            const { jsPDF } = await import('jspdf');
+            const doc = new jsPDF();
+
+            doc.setFontSize(20);
+            doc.text("Purchase Order", 105, 15, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 25);
+            doc.text(`Retailer: ${retailer?.name}`, 14, 30);
+            doc.text(`Vendor: ${vendor?.name}`, 14, 35);
+            doc.text(`Distributor: ${distributor?.name || 'Manual'}`, 14, 40);
+
+            if (vendorNumber) doc.text(`Vendor #: ${vendorNumber}`, 14, 45);
+            if (customerNumber) doc.text(`Customer #: ${customerNumber}`, 14, 50);
+            if (creditAuthNumber) doc.text(`Auth #: ${creditAuthNumber}`, 14, 55);
+
+            let y = 65;
+            doc.setLineWidth(0.5);
+            doc.line(14, y - 2, 196, y - 2);
+            doc.text("Item", 14, y);
+            doc.text("Qty", 140, y);
+            doc.text("Cost", 160, y);
+            doc.text("Total", 180, y);
+            doc.line(14, y + 2, 196, y + 2);
+            y += 8;
+
+            items.forEach(item => {
+                const name = item.itemName || item.sku;
+                doc.text(name.substring(0, 50), 14, y);
+                doc.text(String(item.qty), 140, y);
+                doc.text(`$${Number(item.cost).toFixed(2)}`, 160, y);
+                doc.text(`$${(item.cost * item.qty).toFixed(2)}`, 180, y);
+                y += 6;
+                if (item.mfrNo) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(`MFR: ${item.mfrNo}`, 14, y);
+                    doc.setTextColor(0);
+                    doc.setFontSize(10);
+                    y += 6;
+                }
+            });
+
+            y += 4;
+            doc.line(14, y, 196, y);
+            y += 6;
+            doc.setFontSize(12);
+            doc.text(`Total: $${total.toFixed(2)}`, 180, y, { align: "right" });
+
+            doc.save(`PO_${retailer?.name}_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error("PDF Gen Error:", error);
+            alert("Failed to generate PDF. Check console.");
+        }
+    };
 
     const handleOpenPortal = () => {
         if (portalTarget?.portalUrl) {
@@ -682,7 +760,8 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                         <div>
                             <span className="block text-gray-500 dark:text-gray-400 mb-1">Vendor</span>
                             <span className="font-medium text-gray-900 dark:text-white block text-lg">{vendor?.name}</span>
-                            {vendorNumber && <span className="text-sm text-gray-500 dark:text-gray-400">Vendor #: {vendorNumber}</span>}
+                            {vendorNumber && <span className="text-sm text-gray-500 dark:text-gray-400 block">Vendor #: {vendorNumber}</span>}
+                            {customerNumber && <span className="text-sm text-gray-500 dark:text-gray-400 block">Customer #: {customerNumber}</span>}
                         </div>
                     </div>
 
@@ -764,16 +843,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                             </label>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
-                                placeholder="Enter auth number..."
-                                value={creditAuthNumber}
-                                onChange={(e) => setCreditAuthNumber(e.target.value)}
-                            />
-                        </div>
+
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit Authorization Number <span className="text-red-500">*</span></label>
@@ -801,6 +871,28 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                 </p>
                             </div>
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Internal Team Email (Optional)</label>
+                            <input
+                                type="email"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red outline-none"
+                                placeholder="teammate@example.com"
+                                value={internalEmail}
+                                onChange={(e) => setInternalEmail(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Receive a copy of the PO for internal records.
+                            </p>
+                        </div>
+
+                        {/* PO Button */}
+                        <button
+                            onClick={handleGeneratePO}
+                            className="w-full mb-3 bg-gray-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-700 shadow-sm transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span className="text-lg">📄</span> Download Purchase Order (PDF)
+                        </button>
 
                         <div className="flex items-center gap-3 mb-6">
                             <input type="checkbox" id="confirm" className="w-5 h-5 text-cdh-red rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-cdh-red" />
