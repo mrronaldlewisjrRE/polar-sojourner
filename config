@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+	worktree = .
+[remote "origin"]
+	url = https://github.com/RonaldLewisJrAi/polar-sojourner.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
