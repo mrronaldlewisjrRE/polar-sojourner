@@ -31,9 +31,11 @@ export default function SKUTrackerDashboard() {
     // Unified Product List: Context Products + Catalog Products
     const unifiedItems = useMemo(() => {
         // 1. Process Context Products (Internal)
-        const internalItems = Object.entries(products).flatMap(([vendorId, vendorProducts]) =>
+        const productsObj = (typeof products === 'object' && products !== null) ? products : {};
+        const vendorsArray = (Array.isArray(vendors) ? vendors : []);
+        const internalItems = Object.entries(productsObj).flatMap(([vendorId, vendorProducts]) =>
             (Array.isArray(vendorProducts) ? vendorProducts : []).map(p => {
-                const vendor = vendors.find(v => v.id === vendorId);
+                const vendor = vendorsArray.find(v => v.id === vendorId);
                 const stored = localStorage.getItem(`sku_status_${p.sku}`);
                 const statusData = stored ? JSON.parse(stored) : null;
                 return {

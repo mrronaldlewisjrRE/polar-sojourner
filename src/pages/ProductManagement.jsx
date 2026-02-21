@@ -13,8 +13,10 @@ export default function ProductManagement() {
 
     // Flatten products for display
     const allProducts = useMemo(() => {
-        return Object.entries(products).flatMap(([vendorId, vendorProducts]) =>
-            (Array.isArray(vendorProducts) ? vendorProducts : []).map(p => ({ ...p, vendorId, vendorName: vendors.find(v => v.id === vendorId)?.name }))
+        const productsObj = (typeof products === 'object' && products !== null) ? products : {};
+        const vendorsArray = (Array.isArray(vendors) ? vendors : []);
+        return Object.entries(productsObj).flatMap(([vendorId, vendorProducts]) =>
+            (Array.isArray(vendorProducts) ? vendorProducts : []).map(p => ({ ...p, vendorId, vendorName: vendorsArray.find(v => v.id === vendorId)?.name }))
         );
     }, [products, vendors]);
 

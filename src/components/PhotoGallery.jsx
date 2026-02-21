@@ -23,7 +23,7 @@ export default function PhotoGallery() {
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // 1. Transform Calendar Events into Photo Objects
-    const eventPhotos = events ? events.flatMap(event =>
+    const eventPhotos = (Array.isArray(events) ? events : []).flatMap(event =>
         (Array.isArray(event.images) ? event.images : []).map(img => ({
             id: img.id,
             eventId: event.id, // Keep track of event ID for deletion

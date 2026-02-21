@@ -37,9 +37,9 @@ export default function NewOrder() {
     };
 
     // Derived Data
-    const selectedVendor = VENDORS.find(v => v.id === vendorId);
-    const selectedRetailer = RETAILERS.find(r => r.id === retailerId);
-    const selectedDistributor = DISTRIBUTORS.find(d => d.id === distributorId) || (distributorId === 'manual' ? { id: 'manual', name: 'Manual / Other', format: 'Manual' } : null);
+    const selectedVendor = (Array.isArray(VENDORS) ? VENDORS : []).find(v => v.id === vendorId);
+    const selectedRetailer = (Array.isArray(RETAILERS) ? RETAILERS : []).find(r => r.id === retailerId);
+    const selectedDistributor = (Array.isArray(DISTRIBUTORS) ? DISTRIBUTORS : []).find(d => d.id === distributorId) || (distributorId === 'manual' ? { id: 'manual', name: 'Manual / Other', format: 'Manual' } : null);
     const vendorProducts = PRODUCTS[vendorId] || [];
     const competitorTags = selectedRetailer ? getCompetitorTags(selectedRetailer.notes) : [];
 
@@ -267,7 +267,7 @@ export default function NewOrder() {
                             }
 
                             // 2. Distributor Match
-                            const distMatch = DISTRIBUTORS.find(d => `Distributor: ${d.name}` === val);
+                            const distMatch = (Array.isArray(DISTRIBUTORS) ? DISTRIBUTORS : []).find(d => `Distributor: ${d.name}` === val);
                             if (distMatch) {
                                 if (!vendorId) {
                                     toast.warning('Please select a Vendor first before setting Distributor (or use Auto-Routing).');

@@ -109,7 +109,7 @@ export default function Dashboard() {
                             </div>
                         )}
                         {(Array.isArray(orders) ? orders : []).slice(0, 10).map((order) => {
-                            const dist = distributors.find(d => d.id === order.distributorId);
+                            const dist = (Array.isArray(distributors) ? distributors : []).find(d => d.id === order.distributorId);
                             return (
                                 <div key={order.id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-600 group">
                                     <div>

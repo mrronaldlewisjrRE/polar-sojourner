@@ -143,14 +143,14 @@ export default function VendorManagement() {
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex justify-center -space-x-2">
                                                 {(Array.isArray(vendor.authorizedDistributors) ? vendor.authorizedDistributors : []).map((distId, i) => {
-                                                    const dist = DISTRIBUTORS.find(d => d.id === distId);
+                                                    const dist = (Array.isArray(DISTRIBUTORS) ? DISTRIBUTORS : []).find(d => d.id === distId);
                                                     return (
                                                         <div key={i} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300" title={dist?.name}>
-                                                            {dist?.name.substring(0, 2).toUpperCase()}
+                                                            {dist?.name?.substring(0, 2).toUpperCase()}
                                                         </div>
                                                     );
                                                 })}
-                                                {vendor.authorizedDistributors.length === 0 && (
+                                                {(!vendor.authorizedDistributors || vendor.authorizedDistributors.length === 0) && (
                                                     <span className="text-xs text-gray-400 italic">None</span>
                                                 )}
                                             </div>
