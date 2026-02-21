@@ -557,8 +557,8 @@ export default function NewOrder() {
                                                 if (!catalog) return null;
                                                 const diff = Math.abs(item.cost - catalog.cost) > 0.001;
                                                 return diff ? (
-                                                    <span className="text-cdh-red flex items-center gap-0.5" title={`Catalog Price: $${catalog.cost.toFixed(2)}`}>
-                                                        <AlertTriangle size={10} /> List: ${catalog.cost.toFixed(2)}
+                                                    <span className="text-cdh-red flex items-center gap-0.5" title={`Catalog Price: $${Number(catalog.cost || 0).toFixed(2)}`}>
+                                                        <AlertTriangle size={10} /> List: ${Number(catalog.cost || 0).toFixed(2)}
                                                     </span>
                                                 ) : (
                                                     <span className="text-green-600 flex items-center gap-0.5">
@@ -682,8 +682,8 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
             const name = item.itemName || item.sku;
             doc.text(name.substring(0, 50), 14, y);
             doc.text(String(item.qty), 140, y);
-            doc.text(`$${Number(item.cost).toFixed(2)}`, 160, y);
-            doc.text(`$${(item.cost * item.qty).toFixed(2)}`, 180, y);
+            doc.text(`$${Number(item.cost || 0).toFixed(2)}`, 160, y);
+            doc.text(`$${(Number(item.cost || 0) * Number(item.qty || 1)).toFixed(2)}`, 180, y);
             y += 6;
             if (item.mfrNo) {
                 doc.setFontSize(8);
@@ -699,7 +699,7 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
         doc.line(14, y, 196, y);
         y += 6;
         doc.setFontSize(12);
-        doc.text(`Total: $${total.toFixed(2)}`, 180, y, { align: "right" });
+        doc.text(`Total: $${Number(total || 0).toFixed(2)}`, 180, y, { align: "right" });
 
         return doc;
     };
@@ -798,22 +798,22 @@ function ReviewScreen({ retailer, vendor, distributor, items, notes, vendorNumbe
                                             {/* Description removed from review */}
                                         </td>
                                         <td className="py-3 text-center text-gray-900 dark:text-gray-200">{item.qty}</td>
-                                        <td className="py-3 text-right text-gray-900 dark:text-gray-200">${(item.cost * item.qty).toFixed(2)}</td>
+                                        <td className="py-3 text-right text-gray-900 dark:text-gray-200">${(Number(item.cost || 0) * Number(item.qty || 1)).toFixed(2)}</td>
                                     </tr>
                                 ))}
                                 <tr>
                                     <td colSpan="2" className="pt-4 text-right font-medium text-gray-900 dark:text-white">Subtotal</td>
-                                    <td className="pt-4 text-right font-medium text-gray-900 dark:text-white">${items.reduce((sum, item) => sum + (item.cost * item.qty), 0).toFixed(2)}</td>
+                                    <td className="pt-4 text-right font-medium text-gray-900 dark:text-white">${items.reduce((sum, item) => sum + (Number(item.cost || 0) * Number(item.qty || 1)), 0).toFixed(2)}</td>
                                 </tr>
                                 {shippingCost > 0 && (
                                     <tr>
                                         <td colSpan="2" className="pt-1 text-right font-medium text-gray-600 dark:text-gray-400">Shipping</td>
-                                        <td className="pt-1 text-right font-medium text-gray-600 dark:text-gray-400">${shippingCost.toFixed(2)}</td>
+                                        <td className="pt-1 text-right font-medium text-gray-600 dark:text-gray-400">${Number(shippingCost || 0).toFixed(2)}</td>
                                     </tr>
                                 )}
                                 <tr>
                                     <td colSpan="2" className="pt-2 text-right font-bold text-gray-900 dark:text-white">Total</td>
-                                    <td className="pt-2 text-right font-bold text-lg text-cdh-red dark:text-red-400">${total.toFixed(2)}</td>
+                                    <td className="pt-2 text-right font-bold text-lg text-cdh-red dark:text-red-400">${Number(total || 0).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>

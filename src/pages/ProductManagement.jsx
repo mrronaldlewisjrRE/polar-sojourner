@@ -113,7 +113,7 @@ export default function ProductManagement() {
                                         {vendor?.name || product.vendorId}
                                     </td>
                                     <td className="px-6 py-4 text-right font-medium text-gray-900 dark:text-white">
-                                        ${product.cost.toFixed(2)}
+                                        ${Number(product.cost || 0).toFixed(2)}
                                     </td>
                                     <td className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                         {product.packQty || 1}

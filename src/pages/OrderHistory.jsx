@@ -130,7 +130,7 @@ export default function OrderHistory() {
                                                     {distributor.name}
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                                                    ${order.total.toFixed(2)}
+                                                    ${Number(order.total || 0).toFixed(2)}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-transparent dark:border-blue-800">

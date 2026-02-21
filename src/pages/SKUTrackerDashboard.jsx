@@ -362,7 +362,7 @@ export default function SKUTrackerDashboard() {
                                             <span className="font-bold text-gray-900 dark:text-white font-mono">{item.sku}</span>
                                             {item.price && (
                                                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                                                    ${item.price.toFixed(2)}
+                                                    ${Number(item.price || 0).toFixed(2)}
                                                 </span>
                                             )}
                                         </div>
