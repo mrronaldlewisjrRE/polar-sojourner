@@ -33,7 +33,7 @@ export default function PhotoGallery() {
             date: event.date,
             isEventPhoto: true
         }))
-    ) : [];
+    );
 
     // 2. Merge and Filter
     const allPhotos = [...MOCK_PHOTOS, ...eventPhotos];
