@@ -18,8 +18,10 @@ import {
     LogOut,
     MessageCircle,
     Image as ImageIcon,
-    Server,
-    Shield
+    Shield,
+    TrendingUp,
+    FileSpreadsheet,
+    Server
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate, Link, NavLink, Outlet } from 'react-router-dom';
@@ -226,6 +228,10 @@ function NavContent({ user, onClick, onChatClick }) {
     return (
         <>
             <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={onClick} />
+            <NavItem to="/growth" icon={<TrendingUp size={20} />} label="Growth Engine" onClick={onClick} />
+            <div className="pt-4 pb-1">
+                <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Orders</p>
+            </div>
             <NavItem to="/new-order" icon={<PlusCircle size={20} />} label="New Order" onClick={onClick} />
             <NavItem to="/orders" icon={<ClipboardCheck size={20} />} label="Order History" onClick={onClick} />
 
@@ -234,10 +240,12 @@ function NavContent({ user, onClick, onChatClick }) {
             </div>
             <button
                 onClick={() => { if (onChatClick) onChatClick(); if (onClick) onClick(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-cdh-red dark:hover:text-red-400 transition-colors duration-200"
+                className="group w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-cdh-red dark:hover:text-red-400 transition-all duration-300"
             >
-                <MessageCircle size={20} />
-                <span>Team Chat</span>
+                <div className="transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(0,0,0,0.15)] dark:group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                    <MessageCircle size={20} />
+                </div>
+                <span className="transition-all duration-300 group-hover:[text-shadow:0_0_8px_rgba(0,0,0,0.15)] dark:group-hover:[text-shadow:0_0_8px_rgba(255,255,255,0.4)]">Team Chat</span>
             </button>
 
             <div className="pt-4 pb-1">
@@ -252,6 +260,7 @@ function NavContent({ user, onClick, onChatClick }) {
             <div className="pt-4 pb-1">
                 <p className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">System</p>
             </div>
+            <NavItem to="/documents" icon={<FileSpreadsheet size={20} />} label="Documents" onClick={onClick} />
             <NavItem to="/import-staging" icon={<Server size={20} />} label="Data Import" onClick={onClick} />
             <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" onClick={onClick} />
 
@@ -269,15 +278,33 @@ function NavItem({ to, icon, label, onClick }) {
             to={to}
             onClick={onClick}
             className={({ isActive }) => cn(
-                "flex items-center gap-3 px-4 py-3.5 rounded-md text-sm font-medium transition-colors duration-200 min-h-[48px]", // Increased touch target
+                "group flex items-center gap-3 px-4 py-3.5 rounded-md text-sm font-medium transition-all duration-300 min-h-[48px]", // Increased touch target
                 isActive
                     ? "bg-cdh-red text-white shadow-sm dark:bg-red-900/50 dark:text-red-100"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
             )}
             data-testid={`nav - ${label.toLowerCase().replace(/\s+/g, '-')} `}
         >
-            {icon}
-            <span>{label}</span>
+            {({ isActive }) => {
+                const iconGlow = isActive
+                    ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                    : "group-hover:drop-shadow-[0_0_8px_rgba(0,0,0,0.15)] dark:group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]";
+
+                const textGlow = isActive
+                    ? "[text-shadow:0_0_8px_rgba(255,255,255,0.6)]"
+                    : "group-hover:[text-shadow:0_0_8px_rgba(0,0,0,0.15)] dark:group-hover:[text-shadow:0_0_8px_rgba(255,255,255,0.4)]";
+
+                return (
+                    <>
+                        <div className={cn("transition-all duration-300", iconGlow)}>
+                            {icon}
+                        </div>
+                        <span className={cn("transition-all duration-300", textGlow)}>
+                            {label}
+                        </span>
+                    </>
+                );
+            }}
         </NavLink>
     );
 }

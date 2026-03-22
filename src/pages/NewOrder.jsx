@@ -50,11 +50,11 @@ export default function NewOrder() {
             return;
         }
 
-        const authorized = selectedVendor.authorizedDistributors;
-        const retailerAccounts = Object.keys(selectedRetailer.accounts);
+        const authorized = selectedVendor.authorizedDistributors || selectedVendor.authorized_distributors || [];
+        const retailerAccounts = selectedRetailer.accounts ? Object.keys(selectedRetailer.accounts) : [];
 
         // Filter for valid paths based on Retailer Accounts (basic check)
-        let validPaths = authorized.filter(distId => retailerAccounts.includes(distId));
+        let validPaths = (Array.isArray(authorized) ? authorized : []).filter(distId => retailerAccounts.includes(distId));
 
         // --- HOUSE-HASSON ADVANCED ROUTING LOGIC ---
         // Constraint: Must have both Account AND Warehouse Code (K/P) to be Auto-Routable
@@ -64,7 +64,7 @@ export default function NewOrder() {
 
             if (!isAutoRoutable) {
                 // Remove HH from auto-selection candidates to force Manual Selection
-                validPaths = validPaths.filter(id => id !== 'house-hasson');
+                validPaths = (Array.isArray(validPaths) ? validPaths : []).filter(id => id !== 'house-hasson');
             }
         }
 
@@ -117,7 +117,7 @@ export default function NewOrder() {
     };
 
     const removeItem = (index) => {
-        setItems(items.filter((_, i) => i !== index));
+        setItems((Array.isArray(items) ? items : []).filter((_, i) => i !== index));
     };
 
     const calculateTotal = () => {
@@ -339,69 +339,23 @@ export default function NewOrder() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 transition-colors">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Retailer</label>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            list="retailer-list-search"
-                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
-                            placeholder="Type to search retailer..."
-                            value={RETAILERS.find(r => r.id === retailerId)?.name || retailerId} // Show name if ID matched, else raw input
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                const match = RETAILERS.find(r => r.name === val);
-                                if (match) {
-                                    setRetailerId(match.id);
-                                    setVendorId('');
-                                    setItems([]);
-                                } else {
-                                    setRetailerId(val); // Temporary hold of text
-                                }
-                            }}
-                            onBlur={() => {
-                                // If no match found on blur, effectively acts as "Search"
-                                // We keep the text in state to allow "Add New"
-                            }}
-                        />
-                        <datalist id="retailer-list-search">
-                            {RETAILERS.map(r => (
-                                <option key={r.id} value={r.name}>{r.location}</option>
-                            ))}
-                        </datalist>
-
-                        {/* Add New Hook */}
-                        {retailerId && !RETAILERS.find(r => r.id === retailerId) && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-md border border-yellow-200 dark:border-yellow-700 z-10 shadow-lg">
-                                <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-                                    Retailer "{retailerId}" not found.
-                                </p>
-                                <button
-                                    onClick={() => {
-                                        // Simple prompt for now, could be a modal
-                                        // Actually let's redirect to Retailer page or open a modal?
-                                        // For MVP: Inline prompt
-                                        const loc = prompt(`Enter Location (City, State) for ${retailerId}:`);
-                                        if (loc) {
-                                            // Mock adding - in real app would call addRetailer context
-                                            // But NewOrder doesn't expose addRetailer. We need it.
-                                            // Let's assume user must go to Retailer Mgmt for full add
-                                            // OR we just use a dummy ID for this session?
-                                            // Better: Link to Retailer Management
-                                            if (window.confirm("Quick Add is not fully enabled. Go to Retailer Management to add and return?")) {
-                                                // Link logic
-                                                window.location.href = '/retailers';
-                                            }
-                                        }
-                                    }}
-                                    className="text-sm font-bold text-cdh-red hover:underline"
-                                >
-                                    + Add New Retailer
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
+                        value={retailerId}
+                        onChange={(e) => {
+                            setRetailerId(e.target.value);
+                            setVendorId('');
+                            setItems([]);
+                        }}
+                    >
+                        <option value="">-- Choose Retailer --</option>
+                        {(Array.isArray(RETAILERS) ? RETAILERS : []).map(r => (
+                            <option key={r.id} value={r.id}>{r.name} ({r.location})</option>
+                        ))}
+                    </select>
                     {competitorTags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
-                            {competitorTags.map((tag, idx) => (
+                            {(Array.isArray(competitorTags) ? competitorTags : []).map((tag, idx) => (
                                 <span key={idx} className={`text-xs px-2 py-0.5 rounded border ${tag.color} font-medium`}>
                                     {tag.label}
                                 </span>
@@ -409,19 +363,17 @@ export default function NewOrder() {
                         </div>
                     )}
                 </div>
-                {/* Retailer Select (Explicit) - REMOVED DUPLICATE */}
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Vendor</label>
                     <select
                         data-testid="vendor-select"
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:text-gray-400 dark:disabled:text-gray-600"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none"
                         value={vendorId}
-                        disabled={!retailerId}
                         onChange={(e) => { setVendorId(e.target.value); setItems([]); }}
                     >
                         <option value="">-- Choose Vendor --</option>
-                        {(Array.isArray(VENDORS) ? VENDORS : []).filter(v => v.status === 'Active').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                        {(Array.isArray(VENDORS) ? VENDORS : []).filter(v => v.status === 'Active' || v.status === 'active' || !v.status).map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
                 </div>
                 <div>
@@ -448,12 +400,11 @@ export default function NewOrder() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Distributor</label>
                     <div className="relative">
                         <select
-                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:text-gray-400 dark:disabled:text-gray-600 appearance-none"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-cdh-red focus:border-cdh-red outline-none appearance-none"
                             value={distributorId}
                             onChange={(e) => setDistributorId(e.target.value)}
-                            disabled={!vendorId}
                         >
-                            <option value="">-- Auto-Routing --</option>
+                            <option value="">-- Manual Selection --</option>
                             {(Array.isArray(DISTRIBUTORS) ? DISTRIBUTORS : []).map(d => (
                                 <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
@@ -482,7 +433,7 @@ export default function NewOrder() {
                                 No items added. Click "Add Item" to start.
                             </div>
                         )}
-                        {items.map((item, index) => (
+                        {(Array.isArray(items) ? items : []).map((item, index) => (
                             <div key={index} data-testid="line-item-row" className="flex gap-4 items-start p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 group">
                                 <div className="flex-1">
                                     <div className="flex justify-between items-center mb-1">
@@ -507,7 +458,7 @@ export default function NewOrder() {
                                                 onChange={(e) => updateItem(index, 'sku', e.target.value)}
                                             />
                                             <datalist id={`sku-list-${index}`}>
-                                                {vendorProducts.map(p => (
+                                                {(Array.isArray(vendorProducts) ? vendorProducts : []).map(p => (
                                                     <option key={p.sku} value={p.sku}>{p.description}</option>
                                                 ))}
                                             </datalist>

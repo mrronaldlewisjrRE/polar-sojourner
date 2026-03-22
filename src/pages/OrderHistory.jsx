@@ -9,7 +9,7 @@ export default function OrderHistory() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders = (Array.isArray(orders) ? orders : []).filter(order => {
         const retailer = retailers.find(r => r.id === (order.retailer_id || order.retailerId));
         const vendor = vendors.find(v => v.id === (order.vendor_id || order.vendorId));
 
@@ -71,7 +71,7 @@ export default function OrderHistory() {
                             const v = vendors.find(x => x.id === o.vendorId)?.name || 'Unknown';
                             return [o.id, new Date(o.created_at || o.date).toLocaleDateString(), r, v, Number(o.total || 0).toFixed(2), o.status];
                         });
-                        const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+                        const csvContent = [headers.join(","), ...(Array.isArray(rows) ? rows : []).map(e => e.join(","))].join("\n");
                         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement("a");
                         link.href = URL.createObjectURL(blob);
@@ -160,7 +160,7 @@ export default function OrderHistory() {
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                                                    {(Array.isArray(order.items) ? order.items : []).map((item, idx) => (
+                                                                    {(Array.isArray(order?.items) ? order?.items : []).map((item, idx) => (
                                                                         <tr key={idx}>
                                                                             <td className="py-2 font-mono text-xs text-gray-900 dark:text-gray-300">{item.sku}</td>
                                                                             <td className="py-2 text-gray-500 dark:text-gray-400 text-xs">{item.mfrNo || '-'}</td>

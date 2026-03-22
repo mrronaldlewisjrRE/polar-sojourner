@@ -95,7 +95,7 @@ export default function SKUTrackerDashboard() {
         // User request: "initiating the check". usually implies a full run or run of what's needed.
         // Let's verify everything that isn't already 'active' or 'inactive', OR if nothing checked, everything.
         // Similar to the old logic but manual.
-        const toVerify = unifiedItems.filter(i => i.status === 'unknown' || i.status === 'checking');
+        const toVerify = (Array.isArray(unifiedItems) ? unifiedItems : []).filter(i => i.status === 'unknown' || i.status === 'checking');
         if (toVerify.length > 0) {
             startVerification(toVerify);
         } else {
@@ -110,9 +110,9 @@ export default function SKUTrackerDashboard() {
     // Derived stats
     const stats = useMemo(() => {
         const total = unifiedItems.length;
-        const active = unifiedItems.filter(i => i.status === 'active').length;
-        const inactive = unifiedItems.filter(i => i.status === 'inactive').length;
-        const unknown = unifiedItems.filter(i => i.status === 'unknown' || i.status === 'checking').length;
+        const active = (Array.isArray(unifiedItems) ? unifiedItems : []).filter(i => i.status === 'active').length;
+        const inactive = (Array.isArray(unifiedItems) ? unifiedItems : []).filter(i => i.status === 'inactive').length;
+        const unknown = (Array.isArray(unifiedItems) ? unifiedItems : []).filter(i => i.status === 'unknown' || i.status === 'checking').length;
         return { total, active, inactive, unknown };
     }, [unifiedItems]);
 
@@ -142,7 +142,7 @@ export default function SKUTrackerDashboard() {
     const [filterStatus, setFilterStatus] = useState('All'); // 'All', 'active', 'inactive', 'unknown'
     const [sortConfig, setSortConfig] = useState({ key: 'lastChecked', direction: 'desc' });
 
-    const filteredItems = unifiedItems.filter(item => {
+    const filteredItems = (Array.isArray(unifiedItems) ? unifiedItems : []).filter(item => {
         const matchesSearch = item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.description.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -201,6 +201,12 @@ export default function SKUTrackerDashboard() {
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Live SKU Tracker</h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor product availability across verified vendor sites.</p>
+                        <div className="flex items-center gap-4 mt-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">Status Key:</span>
+                            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_6px_1px_rgba(34,197,94,0.6)]"></div> Online</div>
+                            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_6px_1px_rgba(234,179,8,0.6)]"></div> Unknown</div>
+                            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_1px_rgba(239,68,68,0.6)]"></div> Broken</div>
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
                         {/* Run/Stop Button */}
@@ -284,7 +290,7 @@ export default function SKUTrackerDashboard() {
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
                 {/* Store Tabs */}
                 <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-100 dark:border-gray-700">
-                    {TABS.map(tab => (
+                    {(Array.isArray(TABS) ? TABS : []).map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setFilterVendor(tab.id)}

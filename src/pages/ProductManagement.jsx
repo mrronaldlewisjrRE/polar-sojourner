@@ -20,7 +20,7 @@ export default function ProductManagement() {
         );
     }, [products, vendors]);
 
-    const filteredProducts = allProducts.filter(p => {
+    const filteredProducts = (Array.isArray(allProducts) ? allProducts : []).filter(p => {
         const matchesSearch = p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesVendor = filterVendor === 'All' || p.vendorId === filterVendor;

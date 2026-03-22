@@ -16,7 +16,7 @@ export default function DataImportStaging() {
             const arrayData = Array.isArray(parsed) ? parsed : [parsed];
 
             // Basic validation
-            const validData = arrayData.map((item, idx) => ({
+            const validData = (Array.isArray(arrayData) ? arrayData : []).map((item, idx) => ({
                 id: `staged-${Date.now()}-${idx}`,
                 original: item,
                 status: 'pending', // pending, imported, error
@@ -38,7 +38,7 @@ export default function DataImportStaging() {
     };
 
     const handleImportAll = () => {
-        if (!window.confirm(`Are you sure you want to import ${stagedData.filter(i => i.status === 'pending').length} items?`)) return;
+        if (!window.confirm(`Are you sure you want to import ${(Array.isArray(stagedData) ? stagedData : []).filter(i => i.status === 'pending').length} items?`)) return;
 
         const newStaged = [...stagedData];
         let successCount = 0;

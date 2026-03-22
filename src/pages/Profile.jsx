@@ -74,7 +74,10 @@ export default function Profile() {
             .select('*')
             .order('full_name', { ascending: true });
 
-        if (data) setUsers(data);
+        if (data) {
+            console.log('Shape Check Profile Team:', data);
+            setUsers(Array.isArray(data) ? data : []);
+        }
     };
 
     useEffect(() => {

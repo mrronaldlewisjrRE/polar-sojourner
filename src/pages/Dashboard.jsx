@@ -11,7 +11,7 @@ export default function Dashboard() {
 
     // Derived Stats
     const totalOrders = orders.length; // Basic count
-    const pendingOrders = orders.filter(o => o.status === 'Submitted' || o.submissionStatus === 'SUBMITTED').length;
+    const pendingOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status === 'Submitted' || o.submissionStatus === 'SUBMITTED').length;
 
     return (
         <div className="space-y-6">
@@ -66,9 +66,9 @@ export default function Dashboard() {
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={[
-                                { name: 'Orgill', value: orders.filter(o => o.distributorId === 'orgill').length || 1 },
-                                { name: 'House-Hasson', value: orders.filter(o => o.distributorId === 'house-hasson').length || 1 },
-                                { name: 'Wallace', value: orders.filter(o => o.distributorId === 'wallace').length || 1 },
+                                { name: 'Orgill', value: (Array.isArray(orders) ? orders : []).filter(o => o.distributorId === 'orgill').length || 1 },
+                                { name: 'House-Hasson', value: (Array.isArray(orders) ? orders : []).filter(o => o.distributorId === 'house-hasson').length || 1 },
+                                { name: 'Wallace', value: (Array.isArray(orders) ? orders : []).filter(o => o.distributorId === 'wallace').length || 1 },
                             ]} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-gray-700" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />

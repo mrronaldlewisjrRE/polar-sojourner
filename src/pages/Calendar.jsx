@@ -52,7 +52,7 @@ export default function Calendar() {
         setIsCompressing(true);
         try {
             const compressedImages = await Promise.all(
-                files.map(async (file) => {
+                (Array.isArray(files) ? files : []).map(async (file) => {
                     const url = await compressImage(file, 800, 0.6);
                     return {
                         id: Date.now() + Math.random(),
@@ -71,7 +71,7 @@ export default function Calendar() {
     };
 
     const removeNewEventImage = (id) => {
-        setNewEvent(prev => ({ ...prev, images: prev.images.filter(img => img.id !== id) }));
+        setNewEvent(prev => ({ ...prev, images: (Array.isArray(prev?.images) ? prev?.images : []).filter(img => img.id !== id) }));
     };
 
     // --- Image Handling for Existing Events ---
@@ -87,7 +87,7 @@ export default function Calendar() {
         setIsCompressing(true);
         try {
             const compressedImages = await Promise.all(
-                files.map(async (file) => {
+                (Array.isArray(files) ? files : []).map(async (file) => {
                     const url = await compressImage(file, 800, 0.6);
                     return {
                         id: Date.now() + Math.random(),
@@ -142,7 +142,7 @@ export default function Calendar() {
         }
         for (let day = 1; day <= days; day++) {
             const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
-            const dayEvents = events.filter(e => e.date === dateStr);
+            const dayEvents = (Array.isArray(events) ? events : []).filter(e => e.date === dateStr);
             const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
             calendarDays.push(
@@ -377,7 +377,7 @@ export default function Calendar() {
                                                     </button>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {(Array.isArray(event.images) ? event.images : []).map(img => (
+                                                    {(Array.isArray(event?.images) ? event?.images : []).map(img => (
                                                         <div key={img.id} className="relative group w-16 h-16 rounded-md overflow-hidden border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
                                                             <img
                                                                 src={img.url}
@@ -462,7 +462,7 @@ export default function Calendar() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Event Photos</label>
                                     <div className="grid grid-cols-3 gap-2 mb-2">
-                                        {(Array.isArray(newEvent.images) ? newEvent.images : []).map(img => (
+                                        {(Array.isArray(newEvent?.images) ? newEvent?.images : []).map(img => (
                                             <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 group">
                                                 <img src={img.url} alt="Preview" className="w-full h-full object-cover" />
                                                 <button

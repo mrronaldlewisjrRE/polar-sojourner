@@ -192,7 +192,7 @@ export default function RetailerDiscovery() {
                                 )}
                                 {place.categories && place.categories.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-2">
-                                        {(Array.isArray(place.categories) ? place.categories : []).slice(0, 3).map((cat, idx) => (
+                                        {(Array.isArray(place?.categories) ? place?.categories : []).slice(0, 3).map((cat, idx) => (
                                             <span key={idx} className="text-[10px] uppercase font-bold tracking-wider text-gray-500 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded">
                                                 {cat}
                                             </span>

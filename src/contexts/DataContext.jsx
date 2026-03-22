@@ -39,21 +39,29 @@ export const DataProvider = ({ children }) => {
                 console.log('Fetched Events:', eData.data);
 
                 // Always set data from DB (or empty array if null/error)
-                setVendors(vData.data || []);
-                setDistributors(dData.data || []);
-                setOrders(oData.data || []);
-                setEvents(eData.data || []);
+                console.log('Shape Check Vendors:', vData.data);
+                setVendors(Array.isArray(vData?.data) ? vData?.data : []);
+
+                console.log('Shape Check Distributors:', dData.data);
+                setDistributors(Array.isArray(dData?.data) ? dData?.data : []);
+
+                console.log('Shape Check Orders:', oData.data);
+                setOrders(Array.isArray(oData?.data) ? oData?.data : []);
+
+                console.log('Shape Check Events:', eData.data);
+                setEvents(Array.isArray(eData?.data) ? eData?.data : []);
 
                 if (rData.data) {
                     console.log('Fetched Retailers:', rData.data);
                     // MAP DB (snake_case) -> Frontend (camelCase)
-                    const mappedRetailers = (rData.data || []).map(r => ({
+                    const mappedRetailers = (Array.isArray(rData?.data) ? rData?.data : []).map(r => ({
                         ...r,
                         warehouseCode: r.warehouse_code, // Map back
                         contactName: r.contact_name,     // Map back
                         isFavorite: r.is_favorite        // Map back
                     }));
-                    setRetailers(mappedRetailers);
+                    console.log('Shape Check Retailers:', mappedRetailers);
+                    setRetailers(Array.isArray(mappedRetailers) ? mappedRetailers : []);
                 } else {
                     console.log('Fetched Retailers: NULL/EMPTY');
                     setRetailers([]);
@@ -84,7 +92,7 @@ export const DataProvider = ({ children }) => {
 
         // Realtime Subscription
         const tables = ['vendors', 'distributors', 'retailers', 'products', 'orders', 'events'];
-        const channels = tables.map(table => {
+        const channels = (Array.isArray(tables) ? tables : []).map(table => {
             return supabase
                 .channel(`public:${table}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table }, payload => {
@@ -104,7 +112,7 @@ export const DataProvider = ({ children }) => {
     // Helper for Realtime Arrays
     const handleRealtimeUpdate = (setter, payload) => {
         if (payload.eventType === 'INSERT') setter(prev => [payload.new, ...prev]);
-        if (payload.eventType === 'UPDATE') setter(prev => prev.map(item => item.id === payload.new.id ? payload.new : item));
+        if (payload.eventType === 'UPDATE') setter(prev => (Array.isArray(prev) ? prev : []).map(item => item.id === payload.new.id ? payload.new : item));
         if (payload.eventType === 'DELETE') setter(prev => prev.filter(item => item.id !== payload.old.id));
     };
 
@@ -168,7 +176,7 @@ export const DataProvider = ({ children }) => {
         if (error) console.error("Error updating retailer:", error);
 
         // Optimistic Update
-        setRetailers(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+        setRetailers(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === id ? { ...r, ...updates } : r));
     };
 
     const toggleRetailerFavorite = async (id) => {
@@ -178,7 +186,7 @@ export const DataProvider = ({ children }) => {
             const newStatus = !oldStatus;
 
             // 1. Optimistic Update (Immediate)
-            setRetailers(prev => prev.map(r => r.id === id ? { ...r, isFavorite: newStatus } : r));
+            setRetailers(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === id ? { ...r, isFavorite: newStatus } : r));
 
             // 2. DB Update
             const { error } = await supabase.from('retailers').update({ is_favorite: newStatus }).eq('id', id);
@@ -186,7 +194,7 @@ export const DataProvider = ({ children }) => {
             // 3. Revert on Error
             if (error) {
                 console.error("Error toggling favorite:", error);
-                setRetailers(prev => prev.map(r => r.id === id ? { ...r, isFavorite: oldStatus } : r));
+                setRetailers(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === id ? { ...r, isFavorite: oldStatus } : r));
             }
         }
     };
@@ -233,7 +241,7 @@ export const DataProvider = ({ children }) => {
     };
 
     const updateDistributor = (id, updates) => {
-        setDistributors(distributors.map(d => d.id === id ? { ...d, ...updates } : d));
+        setDistributors((Array.isArray(distributors) ? distributors : []).map(d => d.id === id ? { ...d, ...updates } : d));
     };
 
     const deleteDistributor = (id) => {
@@ -268,7 +276,7 @@ export const DataProvider = ({ children }) => {
         const currentVendorProducts = products[vendorId] || [];
         setProducts({
             ...products,
-            [vendorId]: currentVendorProducts.map(p => p.id === productId ? { ...p, ...updates } : p)
+            [vendorId]: (Array.isArray(currentVendorProducts) ? currentVendorProducts : []).map(p => p.id === productId ? { ...p, ...updates } : p)
         });
     };
 

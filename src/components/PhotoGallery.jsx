@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Filter, Image as ImageIcon, Maximize2, Calendar, SortDesc, Trash2 } from 'lucide-react';
+import { Filter, Image as ImageIcon, Maximize2, Calendar, SortDesc, Trash2, Share2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
 import { cn } from '../lib/utils';
 
 // Mock Photo Data (Static Legacy Data)
@@ -15,16 +16,18 @@ const MOCK_PHOTOS = [
 
 export default function PhotoGallery() {
     const { events, updateEvent } = useData();
+    const toast = useToast();
     const [filter, setFilter] = useState('All');
     const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Title'
     const [selectedPhoto, setSelectedPhoto] = useState(null);
 
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [hiddenMockPhotos, setHiddenMockPhotos] = useState(new Set());
 
     // 1. Transform Calendar Events into Photo Objects
     const eventPhotos = (Array.isArray(events) ? events : []).flatMap(event =>
-        (Array.isArray(event.images) ? event.images : []).map(img => ({
+        (Array.isArray(event?.images) ? event?.images : []).map(img => ({
             id: img.id,
             eventId: event.id, // Keep track of event ID for deletion
             title: event.title,
@@ -36,9 +39,10 @@ export default function PhotoGallery() {
     );
 
     // 2. Merge and Filter
-    const allPhotos = [...MOCK_PHOTOS, ...eventPhotos];
+    const activeMockPhotos = MOCK_PHOTOS.filter(p => !hiddenMockPhotos.has(p.id));
+    const allPhotos = [...activeMockPhotos, ...eventPhotos];
 
-    const filteredPhotos = allPhotos.filter(photo => {
+    const filteredPhotos = (Array.isArray(allPhotos) ? allPhotos : []).filter(photo => {
         if (filter === 'All') return true;
         // Map specific event types if needed, otherwise exact match
         if (filter === 'Show') return photo.category === 'Show';
@@ -55,7 +59,6 @@ export default function PhotoGallery() {
     });
 
     const toggleSelection = (photo) => {
-        if (!photo.isEventPhoto) return; // Cannot select mock photos
         const newSelected = new Set(selectedIds);
         if (newSelected.has(photo.id)) {
             newSelected.delete(photo.id);
@@ -70,7 +73,7 @@ export default function PhotoGallery() {
         if (!window.confirm(`Delete ${selectedIds.size} selected photos?`)) return;
 
         // Group by event to minimize updates
-        const photosToDelete = eventPhotos.filter(p => selectedIds.has(p.id));
+        const photosToDelete = (Array.isArray(eventPhotos) ? eventPhotos : []).filter(p => selectedIds.has(p.id));
         const eventsToUpdate = {};
 
         photosToDelete.forEach(photo => {
@@ -91,19 +94,49 @@ export default function PhotoGallery() {
             }
         });
 
+        // Handle mock photos in selection
+        const mockPhotosToDelete = MOCK_PHOTOS.filter(p => selectedIds.has(p.id));
+        if (mockPhotosToDelete.length > 0) {
+            const newHidden = new Set(hiddenMockPhotos);
+            mockPhotosToDelete.forEach(p => newHidden.add(p.id));
+            setHiddenMockPhotos(newHidden);
+        }
+
         // Reset
         setIsSelectionMode(false);
         setSelectedIds(new Set());
+        if (toast?.addToast) toast.addToast('success', `${selectedIds.size} photos deleted.`);
     };
 
     const handleDeletePhoto = (e, photo) => {
         e.stopPropagation();
-        if (!photo.isEventPhoto || !window.confirm('Delete this photo?')) return;
+        if (!window.confirm('Delete this photo?')) return;
 
-        const event = events.find(ev => ev.id === photo.eventId);
-        if (event) {
-            const updatedImages = (event.images || []).filter(img => img.id !== photo.id);
-            updateEvent(photo.eventId, { images: updatedImages });
+        if (photo.isEventPhoto) {
+            const event = events.find(ev => ev.id === photo.eventId);
+            if (event) {
+                const updatedImages = (event.images || []).filter(img => img.id !== photo.id);
+                updateEvent(photo.eventId, { images: updatedImages });
+                if (toast?.addToast) toast.addToast('success', 'Photo deleted successfully.');
+            }
+        } else {
+            const newHidden = new Set(hiddenMockPhotos);
+            newHidden.add(photo.id);
+            setHiddenMockPhotos(newHidden);
+            if (toast?.addToast) toast.addToast('success', 'Demo photo removed from view.');
+        }
+    };
+
+    const handleSharePhoto = (e, photo) => {
+        e.stopPropagation();
+        const shareText = `Check out this photo from ${photo.title}: \n\n${photo.url}`;
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareText);
+            if (toast?.addToast) toast.addToast('success', 'Internal share link copied to clipboard!');
+        } else {
+            window.location.href = `mailto:?subject=Sharing Event Photo: ${photo.title}&body=${encodeURIComponent(shareText)}`;
+            if (toast?.addToast) toast.addToast('success', 'Opening email client to share photo.');
         }
     };
 
@@ -215,8 +248,8 @@ export default function PhotoGallery() {
                                 />
 
                                 {/* Selection Checkbox Overlay */}
-                                {isSelectionMode && photo.isEventPhoto && (
-                                    <div className="absolute top-2 right-2">
+                                {isSelectionMode && (
+                                    <div className="absolute top-2 right-2 z-10">
                                         <div className={cn(
                                             "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
                                             isSelected
@@ -248,19 +281,30 @@ export default function PhotoGallery() {
                                             </div>
                                         </div>
 
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1.5 rounded-full text-white">
-                                            <Maximize2 size={14} />
+                                        <div className="absolute top-2 right-2 flex flex-col gap-2 z-10">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSelectedPhoto(photo); }}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 p-1.5 rounded-full text-white shadow-sm"
+                                                title="View Full Size (or click image)"
+                                            >
+                                                <Maximize2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleSharePhoto(e, photo)}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600/80 hover:bg-blue-600 p-1.5 rounded-full text-white shadow-sm"
+                                                title="Share Internally"
+                                            >
+                                                <Share2 size={14} />
+                                            </button>
                                         </div>
 
-                                        {photo.isEventPhoto && (
-                                            <button
-                                                onClick={(e) => handleDeletePhoto(e, photo)}
-                                                className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full"
-                                                title="Delete Photo"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={(e) => handleDeletePhoto(e, photo)}
+                                            className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full shadow-sm"
+                                            title="Delete Photo"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -276,17 +320,29 @@ export default function PhotoGallery() {
                     onClick={() => setSelectedPhoto(null)}
                 >
                     <div className="max-w-5xl w-full max-h-[90vh] flex flex-col gap-4 relative">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePhoto(e, selectedPhoto);
-                                setSelectedPhoto(null);
-                            }}
-                            className="absolute top-4 right-4 z-50 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
-                            title="Delete Photo"
-                        >
-                            <Trash2 size={20} />
-                        </button>
+                        <div className="absolute top-4 right-4 z-50 flex gap-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSharePhoto(e, selectedPhoto);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg transition-colors"
+                                title="Share Internally"
+                            >
+                                <Share2 size={20} />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePhoto(e, selectedPhoto);
+                                    setSelectedPhoto(null);
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-colors"
+                                title="Delete Photo"
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                        </div>
                         <img
                             src={selectedPhoto.url}
                             alt={selectedPhoto.title}

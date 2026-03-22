@@ -80,7 +80,7 @@ export default function ManualCheckModal({ isOpen, onClose, sku, productName, cu
 
                 <div className="space-y-3">
                     <div className="flex flex-col gap-2 mb-4">
-                        {links.map((link, idx) => (
+                        {(Array.isArray(links) ? links : []).map((link, idx) => (
                             <a
                                 key={idx}
                                 href={link.url}

@@ -15,14 +15,14 @@ export default function RetailerManagement() {
     const [editingRetailer, setEditingRetailer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredRetailers = retailers
+    const filteredRetailers = (Array.isArray(retailers) ? retailers : [])
         .filter(r =>
             r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             r.location.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    const favorites = retailers.filter(r => r.isFavorite);
+    const favorites = (Array.isArray(retailers) ? retailers : []).filter(r => r.isFavorite);
 
     const handleEdit = (retailer) => {
         setEditingRetailer(retailer);
@@ -279,7 +279,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
         // DUPLICATE DETECTION (Fuzzy Match)
         if (!retailer) {
             const currentName = formData.name.toLowerCase();
-            const potentialDupes = existingRetailers.filter(r => {
+            const potentialDupes = (Array.isArray(existingRetailers) ? existingRetailers : []).filter(r => {
                 const rName = r.name.toLowerCase();
                 const dist = levenshtein(currentName, rName);
                 const similarity = 1 - (dist / Math.max(currentName.length, rName.length));
@@ -287,7 +287,7 @@ function RetailerModal({ retailer, existingRetailers, onClose, onSave }) {
             });
 
             if (potentialDupes.length > 0) {
-                const dupeNames = potentialDupes.map(d => d.name).join(', ');
+                const dupeNames = (Array.isArray(potentialDupes) ? potentialDupes : []).map(d => d.name).join(', ');
                 const confirmMsg = `Warning: Potential duplicates found for "${formData.name}":\n\n${dupeNames}\n\nAre you sure you want to create this retailer?`;
                 if (!window.confirm(confirmMsg)) return;
             }

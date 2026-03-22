@@ -190,7 +190,7 @@ export default function ChatInterface({ isOpen, onClose }) {
     };
 
     // Filter messages for display (Double check ensuring real-time pushed messages filter correctly)
-    const displayMessages = messages.filter(m => {
+    const displayMessages = (Array.isArray(messages) ? messages : []).filter(m => {
         if (activeChannel) {
             return (m.sender_id === user.id && m.recipient_id === activeChannel) ||
                 (m.sender_id === activeChannel && m.recipient_id === user.id);

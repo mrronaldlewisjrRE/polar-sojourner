@@ -79,8 +79,8 @@ export default function LiveStatusIndicator({ sku, storeName = 'Vendor Site' }) 
     const statusStyles = {
         active: "bg-green-500 shadow-[0_0_8px_2px_rgba(34,197,94,0.6)]",
         inactive: "bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.6)]",
-        checking: "bg-yellow-300 animate-pulse shadow-[0_0_12px_4px_rgba(253,224,71,0.8)] ring-2 ring-yellow-100/50",
-        unknown: "bg-gray-300 dark:bg-gray-600 hover:bg-yellow-400 shadow-none hover:shadow-[0_0_8px_2px_rgba(250,204,21,0.5)]"
+        checking: "bg-blue-400 animate-pulse shadow-[0_0_12px_4px_rgba(96,165,250,0.8)] ring-2 ring-blue-100/50",
+        unknown: "bg-yellow-500 shadow-[0_0_8px_2px_rgba(234,179,8,0.6)]"
     };
 
     return (

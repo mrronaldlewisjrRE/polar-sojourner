@@ -62,7 +62,7 @@ export default function ProductSearchButton({ sku, description, vendorName }) {
                         </span>
                     </div>
                     <div className="p-1">
-                        {links.map((link, i) => (
+                        {(Array.isArray(links) ? links : []).map((link, i) => (
                             <a
                                 key={i}
                                 href={link.url}

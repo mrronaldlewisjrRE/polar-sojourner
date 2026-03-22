@@ -49,15 +49,18 @@ export default function AdminDashboard() {
             // If logs table doesn't exist yet, we might get an error, ignore it gracefully
             const safeLogs = logsData || [];
 
-            setUsers(usersData || []);
-            setLogs(safeLogs);
+            console.log('Shape Check Admin Users:', usersData);
+            setUsers(Array.isArray(usersData) ? usersData : []);
+
+            console.log('Shape Check Admin Logs:', safeLogs);
+            setLogs(Array.isArray(safeLogs) ? safeLogs : []);
 
             // 3. Compute Stats
             setStats({
                 totalUsers: usersData?.length || 0,
                 admins: usersData?.filter(u => u.role === 'admin').length || 0,
                 recentChecks: safeLogs.length,
-                totalSkus: new Set(safeLogs.map(l => l.sku)).size
+                totalSkus: new Set((Array.isArray(safeLogs) ? safeLogs : []).map(l => l.sku)).size
             });
 
         } catch (error) {
